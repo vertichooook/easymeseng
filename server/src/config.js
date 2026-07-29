@@ -13,6 +13,7 @@ module.exports = {
   host: process.env.HOST || '127.0.0.1',
   sessionSecret: process.env.SESSION_SECRET || 'development_change_me',
   databasePath: process.env.DATABASE_PATH || path.resolve(__dirname, '../../data/messenger.sqlite'),
+  uploadDir: process.env.UPLOAD_DIR || path.resolve(__dirname, '../../uploads'),
   cookieSecure: bool(process.env.COOKIE_SECURE, process.env.NODE_ENV === 'production'),
   trustProxy: Number(process.env.TRUST_PROXY || 0),
   maxMessageLength: 1000,

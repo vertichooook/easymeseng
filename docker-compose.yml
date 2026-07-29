@@ -7,7 +7,9 @@ services:
     environment:
       HOST: 0.0.0.0
       DATABASE_PATH: /app/data/messenger.sqlite
+      UPLOAD_DIR: /app/uploads
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
       - ./data:/app/data
+      - ./uploads:/app/uploads

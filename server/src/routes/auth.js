@@ -18,7 +18,9 @@ router.post('/register', authLimiter, async (req, res, next) => {
     const hash = await bcrypt.hash(req.body.password, 12);
     const result = q.createUser.run(username.value, hash);
     createSession(res, result.lastInsertRowid);
-    return res.status(201).json({ user: q.findUserById.get(result.lastInsertRowid) });
+    const user = q.findUserById.get(result.lastInsertRowid);
+    req.app.get('io')?.emit('user:created', user);
+    return res.status(201).json({ user });
   } catch (error) {
     return next(error);
   }

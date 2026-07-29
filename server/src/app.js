@@ -35,6 +35,10 @@ app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser(config.sessionSecret));
 app.use(attachUser);
 app.use('/api', apiLimiter, routes);
+app.use('/uploads', express.static(config.uploadDir, {
+  fallthrough: false,
+  setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff')
+}));
 
 if (!config.isProduction) {
   app.use(express.static(path.resolve(__dirname, '../../client')));
@@ -58,6 +62,7 @@ const io = new Server(server, {
   cors: false,
   maxHttpBufferSize: 4096
 });
+app.set('io', io);
 registerSocket(io);
 
 server.listen(config.port, config.host, () => {

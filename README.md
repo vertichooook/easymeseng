@@ -10,6 +10,7 @@
 - Helmet, rate limiting, параметризованные SQL-запросы
 - HTML, CSS, JavaScript
 - Nginx, Docker Compose, systemd
+- Загрузка изображений, видео, голосовых и видеосообщений в `uploads/`
 
 ## Структура
 
@@ -48,7 +49,7 @@ nano .env
 openssl rand -hex 32
 ```
 
-Вставьте результат в `SESSION_SECRET`. Для Docker оставьте `DATABASE_PATH=/app/data/messenger.sqlite`, `COOKIE_SECURE=true`, `TRUST_PROXY=1`.
+Вставьте результат в `SESSION_SECRET`. Для Docker оставьте `DATABASE_PATH=/app/data/messenger.sqlite`, `UPLOAD_DIR=/app/uploads`, `COOKIE_SECURE=true`, `TRUST_PROXY=1`.
 
 ## Запуск через Docker Compose
 
@@ -172,4 +173,6 @@ curl -i https://chat.example.com/api/health
 - Cookie не сохраняется: в production нужен HTTPS при `COOKIE_SECURE=true`.
 - WebSocket не подключается: проверьте блок `/socket.io/`, заголовки `Upgrade` и `Connection`.
 - База пропала после перезапуска: проверьте volume `./data:/app/data` и `DATABASE_PATH`.
+- Медиа не загружается: проверьте `client_max_body_size 30m`, папку `uploads/` и volume `./uploads:/app/uploads`.
+- Голосовые или видеосообщения не записываются: браузеру нужен HTTPS или localhost для доступа к микрофону и камере.
 - Ошибка native-модуля SQLite: пересоберите контейнер `docker compose build --no-cache`.

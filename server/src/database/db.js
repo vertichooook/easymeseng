@@ -4,6 +4,7 @@ const Database = require('better-sqlite3');
 const config = require('../config');
 
 fs.mkdirSync(path.dirname(config.databasePath), { recursive: true });
+fs.mkdirSync(config.uploadDir, { recursive: true });
 
 const db = new Database(config.databasePath);
 db.pragma('journal_mode = WAL');
@@ -15,6 +16,7 @@ function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT NOT NULL UNIQUE COLLATE NOCASE,
       password_hash TEXT NOT NULL,
+      avatar_url TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -48,9 +50,15 @@ function initDb() {
       room_id INTEGER NOT NULL,
       user_id INTEGER NOT NULL,
       body TEXT NOT NULL,
+      attachment_url TEXT,
+      attachment_type TEXT,
+      attachment_name TEXT,
+      deleted_at TEXT,
+      deleted_by INTEGER,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (deleted_by) REFERENCES users(id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS private_messages (
@@ -58,13 +66,47 @@ function initDb() {
       sender_id INTEGER NOT NULL,
       receiver_id INTEGER NOT NULL,
       body TEXT NOT NULL,
+      attachment_url TEXT,
+      attachment_type TEXT,
+      attachment_name TEXT,
+      deleted_at TEXT,
+      deleted_by INTEGER,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+      FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (deleted_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS hidden_messages (
+      user_id INTEGER NOT NULL,
+      message_type TEXT NOT NULL CHECK (message_type IN ('room', 'private')),
+      message_id INTEGER NOT NULL,
+      hidden_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, message_type, message_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
     INSERT OR IGNORE INTO rooms (id, name, created_by) VALUES (1, 'general', NULL);
   `);
+
+  migrateColumn('users', 'avatar_url', 'TEXT');
+  migrateColumn('messages', 'attachment_url', 'TEXT');
+  migrateColumn('messages', 'attachment_type', 'TEXT');
+  migrateColumn('messages', 'attachment_name', 'TEXT');
+  migrateColumn('messages', 'deleted_at', 'TEXT');
+  migrateColumn('messages', 'deleted_by', 'INTEGER');
+  migrateColumn('private_messages', 'attachment_url', 'TEXT');
+  migrateColumn('private_messages', 'attachment_type', 'TEXT');
+  migrateColumn('private_messages', 'attachment_name', 'TEXT');
+  migrateColumn('private_messages', 'deleted_at', 'TEXT');
+  migrateColumn('private_messages', 'deleted_by', 'INTEGER');
+}
+
+function migrateColumn(table, column, type) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all().map((item) => item.name);
+  if (!columns.includes(column)) {
+    db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
+  }
 }
 
 initDb();

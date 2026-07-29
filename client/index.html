@@ -11,12 +11,13 @@
     <aside id="sidebar" class="sidebar">
       <div class="brand">
         <strong>Messenger</strong>
-        <button id="closeSidebar" class="icon-button" title="Закрыть">×</button>
+        <button id="themeButton" class="icon-button ghost" type="button" title="Тема">◐</button>
+        <button id="closeSidebar" class="icon-button ghost" type="button" title="Закрыть">×</button>
       </div>
       <section class="panel-section">
         <div class="section-title">
           <span>Комнаты</span>
-          <button id="openRoomModal" class="icon-button" title="Создать комнату">+</button>
+          <button id="openRoomModal" class="icon-button" type="button" title="Создать комнату">+</button>
         </div>
         <div id="roomsList" class="list"></div>
       </section>
@@ -32,7 +33,7 @@
 
     <main class="chat">
       <header class="chat-header">
-        <button id="openSidebar" class="icon-button menu-button" title="Меню">☰</button>
+        <button id="openSidebar" class="icon-button menu-button" type="button" title="Меню">☰</button>
         <div>
           <h1 id="chatTitle">Общий чат</h1>
           <span id="connectionStatus" class="status">подключение...</span>
@@ -41,8 +42,12 @@
       <div id="messages" class="messages" aria-live="polite"></div>
       <div id="typing" class="typing"></div>
       <form id="messageForm" class="composer">
+        <input id="fileInput" type="file" accept="image/*,video/*" hidden>
+        <button id="attachButton" class="icon-button ghost" type="button" title="Картинка или видео">＋</button>
+        <button id="voiceButton" class="icon-button ghost" type="button" title="Голосовое сообщение">●</button>
+        <button id="videoButton" class="icon-button ghost" type="button" title="Видеосообщение">▣</button>
         <textarea id="messageInput" maxlength="1000" placeholder="Напишите сообщение" rows="1"></textarea>
-        <button type="submit">Отправить</button>
+        <button id="sendButton" type="submit">Отправить</button>
       </form>
     </main>
   </div>
@@ -59,11 +64,16 @@
   </dialog>
 
   <dialog id="profileModal">
-    <div class="modal-form">
+    <form id="profileForm" class="modal-form">
       <h2>Профиль</h2>
-      <p id="profileText"></p>
-      <button id="closeProfile" type="button">Закрыть</button>
-    </div>
+      <div class="avatar-preview" id="profileAvatar"></div>
+      <label>Имя пользователя<input name="username" required minlength="3" maxlength="32"></label>
+      <input id="avatarInput" type="file" accept="image/*">
+      <menu>
+        <button id="closeProfile" type="button">Закрыть</button>
+        <button type="submit">Сохранить</button>
+      </menu>
+    </form>
   </dialog>
 
   <div id="toast" class="toast" role="status"></div>
