@@ -299,6 +299,9 @@ mark {
   background: var(--soft);
   color: var(--muted);
 }
+.reply-bar[hidden] {
+  display: none !important;
+}
 .reply-bar button {
   width: 28px;
   height: 28px;
