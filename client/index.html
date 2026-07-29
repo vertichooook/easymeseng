@@ -64,6 +64,14 @@
     <button type="button" data-menu-action="delete">Удалить</button>
   </div>
 
+  <div id="recordPreviewOverlay" class="record-preview-overlay" hidden>
+    <video id="recordLivePreview" class="record-live-preview" autoplay muted playsinline></video>
+    <div class="record-preview-status">
+      <span class="record-dot"></span>
+      <span id="recordTimer">00:00</span>
+    </div>
+  </div>
+
   <dialog id="deleteModal">
     <form id="deleteForm" class="modal-form">
       <h2>Удалить сообщение?</h2>

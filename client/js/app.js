@@ -18,6 +18,8 @@ const state = {
   recordingKind: null,
   recordingStartedAt: 0,
   recordStopTimer: null,
+  recordTimerInterval: null,
+  recordStream: null,
   typing: new Map(),
   recorder: null,
   chunks: [],
@@ -47,6 +49,9 @@ const el = {
   videoPreview: document.querySelector('#videoPreview'),
   cancelVideoPreview: document.querySelector('#cancelVideoPreview'),
   sendVideoPreview: document.querySelector('#sendVideoPreview'),
+  recordPreviewOverlay: document.querySelector('#recordPreviewOverlay'),
+  recordLivePreview: document.querySelector('#recordLivePreview'),
+  recordTimer: document.querySelector('#recordTimer'),
   settingsModal: document.querySelector('#settingsModal'),
   roomSettingsModal: document.querySelector('#roomSettingsModal'),
   roomSettingsForm: document.querySelector('#roomSettingsForm'),
@@ -577,6 +582,35 @@ async function primeMediaPermission(kind) {
   }
 }
 
+function formatDuration(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const minutes = String(Math.floor(total / 60)).padStart(2, '0');
+  const seconds = String(total % 60).padStart(2, '0');
+  return `${minutes}:${seconds}`;
+}
+
+function updateRecordTimer() {
+  el.recordTimer.textContent = formatDuration(Date.now() - state.recordingStartedAt);
+}
+
+function showLiveRecordPreview(stream) {
+  state.recordStream = stream;
+  el.recordLivePreview.srcObject = stream;
+  el.recordPreviewOverlay.hidden = false;
+  el.recordTimer.textContent = '00:00';
+  clearInterval(state.recordTimerInterval);
+  state.recordTimerInterval = setInterval(updateRecordTimer, 250);
+}
+
+function hideLiveRecordPreview() {
+  clearInterval(state.recordTimerInterval);
+  state.recordTimerInterval = null;
+  el.recordLivePreview.pause();
+  el.recordLivePreview.srcObject = null;
+  el.recordPreviewOverlay.hidden = true;
+  state.recordStream = null;
+}
+
 async function startRecording(kind) {
   if (state.recordStarting || state.recorder?.state === 'recording') return;
   state.recordStarting = true;
@@ -623,6 +657,7 @@ async function startRecording(kind) {
         state.recordingStartedAt = 0;
         clearTimeout(state.recordStopTimer);
         state.recordStopTimer = null;
+        hideLiveRecordPreview();
         updateRecordButton();
       }
     };
@@ -630,6 +665,7 @@ async function startRecording(kind) {
     state.recordingStartedAt = Date.now();
     state.recordStarting = false;
     el.recordButton.classList.add('recording');
+    if (kind === 'video') showLiveRecordPreview(stream);
     toast(kind === 'video' ? 'Идёт запись видео. Отпустите кнопку для отправки.' : 'Идёт запись голоса. Отпустите кнопку для отправки.');
     if (state.stopAfterStart) {
       setTimeout(stopRecording, 1000);
@@ -640,6 +676,7 @@ async function startRecording(kind) {
     state.recordingKind = null;
     state.recordingStartedAt = 0;
     el.recordButton.classList.remove('recording');
+    hideLiveRecordPreview();
     if (error.name === 'NotAllowedError') return toast('Камера заблокирована. Проверьте HTTPS и Permissions-Policy в Nginx.');
     if (error.name === 'NotFoundError') return toast('Микрофон или камера не найдены.');
     if (error.name === 'NotReadableError') return toast('Устройство уже используется другим приложением.');

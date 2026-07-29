@@ -514,6 +514,53 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   max-height: 54px;
   background: transparent;
 }
+.record-preview-overlay {
+  position: fixed;
+  right: 18px;
+  bottom: 148px;
+  z-index: 35;
+  width: min(220px, 54vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #000;
+  border: 4px solid color-mix(in srgb, var(--panel) 88%, transparent);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 0.32);
+  animation: previewIn 0.16s ease both;
+}
+.record-preview-overlay[hidden] {
+  display: none !important;
+}
+.record-live-preview {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+.record-preview-status {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: white;
+  background: rgb(0 0 0 / 0.52);
+  backdrop-filter: blur(8px);
+  font-size: 13px;
+  font-weight: 700;
+}
+.record-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff4b55;
+  box-shadow: 0 0 0 4px rgb(255 75 85 / 0.18);
+}
 .video-preview {
   width: 100%;
   max-height: min(68vh, 520px);
@@ -618,6 +665,11 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--danger) 0%, transparent); }
 }
 
+@keyframes previewIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
@@ -644,6 +696,11 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   }
   #sendButton { grid-column: 1 / -1; }
   .chat-actions { gap: 5px; }
+  .record-preview-overlay {
+    right: 14px;
+    bottom: 118px;
+    width: min(190px, 58vw);
+  }
 }
 
 /* Nexus visual refresh */
