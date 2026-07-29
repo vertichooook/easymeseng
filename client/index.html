@@ -126,7 +126,10 @@
     </form>
   </dialog>
 
-  <div id="toast" class="toast" role="status"></div>
+  <div id="toast" class="toast" role="status">
+    <span id="toastText"></span>
+    <button id="toastClose" type="button" title="Закрыть">×</button>
+  </div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/app.js"></script>
 </body>

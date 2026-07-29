@@ -394,8 +394,26 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   transform: translateY(8px);
   pointer-events: none;
   transition: 0.18s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(420px, calc(100vw - 28px));
+  box-shadow: 0 12px 34px rgb(0 0 0 / 0.22);
 }
-.toast.show { opacity: 1; transform: translateY(0); }
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.toast button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: rgb(255 255 255 / 0.12);
+  color: white;
+  flex: 0 0 auto;
+}
+.toast button:hover { background: rgb(255 255 255 / 0.22); }
 .avatar {
   width: 34px;
   height: 34px;

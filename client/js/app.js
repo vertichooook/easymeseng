@@ -42,12 +42,15 @@ const el = {
   roomAvatarPreview: document.querySelector('#roomAvatarPreview'),
   roomAvatarInput: document.querySelector('#roomAvatarInput'),
   typing: document.querySelector('#typing'),
-  toast: document.querySelector('#toast')
+  toast: document.querySelector('#toast'),
+  toastText: document.querySelector('#toastText'),
+  toastClose: document.querySelector('#toastClose')
 };
 
 const chatKey = (type, id) => `${type}:${id}`;
 const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
 const displayName = (user) => user?.display_name || user?.username || user?.name || '?';
+let toastTimer = null;
 
 async function api(path, options = {}) {
   const headers = options.body instanceof FormData ? options.headers || {} : { 'Content-Type': 'application/json', ...(options.headers || {}) };
@@ -58,10 +61,16 @@ async function api(path, options = {}) {
 }
 
 function toast(message) {
-  el.toast.textContent = message;
+  clearTimeout(toastTimer);
+  el.toastText.textContent = message;
   el.toast.classList.add('show');
-  setTimeout(() => el.toast.classList.remove('show'), 2600);
+  toastTimer = setTimeout(() => el.toast.classList.remove('show'), 3200);
 }
+
+el.toastClose.onclick = () => {
+  clearTimeout(toastTimer);
+  el.toast.classList.remove('show');
+};
 
 function avatar(entity, size = '') {
   const cls = `avatar ${size}`;
