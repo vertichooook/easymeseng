@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Messenger</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside id="sidebar" class="sidebar">
+      <div class="brand">
+        <strong>Messenger</strong>
+        <button id="closeSidebar" class="icon-button" title="Закрыть">×</button>
+      </div>
+      <section class="panel-section">
+        <div class="section-title">
+          <span>Комнаты</span>
+          <button id="openRoomModal" class="icon-button" title="Создать комнату">+</button>
+        </div>
+        <div id="roomsList" class="list"></div>
+      </section>
+      <section class="panel-section users-section">
+        <div class="section-title"><span>Пользователи</span></div>
+        <div id="usersList" class="list"></div>
+      </section>
+      <section class="profile-mini">
+        <button id="profileButton" type="button"></button>
+        <button id="logoutButton" type="button">Выйти</button>
+      </section>
+    </aside>
+
+    <main class="chat">
+      <header class="chat-header">
+        <button id="openSidebar" class="icon-button menu-button" title="Меню">☰</button>
+        <div>
+          <h1 id="chatTitle">Общий чат</h1>
+          <span id="connectionStatus" class="status">подключение...</span>
+        </div>
+      </header>
+      <div id="messages" class="messages" aria-live="polite"></div>
+      <div id="typing" class="typing"></div>
+      <form id="messageForm" class="composer">
+        <textarea id="messageInput" maxlength="1000" placeholder="Напишите сообщение" rows="1"></textarea>
+        <button type="submit">Отправить</button>
+      </form>
+    </main>
+  </div>
+
+  <dialog id="roomModal">
+    <form id="roomForm" method="dialog" class="modal-form">
+      <h2>Новая комната</h2>
+      <input name="name" required minlength="2" maxlength="60" placeholder="Название комнаты">
+      <menu>
+        <button value="cancel" type="button" id="cancelRoom">Отмена</button>
+        <button type="submit">Создать</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="profileModal">
+    <div class="modal-form">
+      <h2>Профиль</h2>
+      <p id="profileText"></p>
+      <button id="closeProfile" type="button">Закрыть</button>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+[Unit]
+Description=Messenger Node.js backend
+After=network.target
+
+[Service]
+Type=simple
+User=messenger
+Group=messenger
+WorkingDirectory=/var/www/messenger/server
+EnvironmentFile=/var/www/messenger/.env
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

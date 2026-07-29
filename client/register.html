@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Регистрация | Messenger</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="auth-page">
+  <main class="auth-card">
+    <h1>Регистрация</h1>
+    <p>Имя: латиница, цифры или подчёркивание.</p>
+    <form id="registerForm" class="auth-form">
+      <label>Имя пользователя<input name="username" autocomplete="username" required minlength="3" maxlength="32"></label>
+      <label>Пароль<input name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128"></label>
+      <button type="submit">Зарегистрироваться</button>
+      <div id="notice" class="notice" role="status"></div>
+    </form>
+    <a href="/login.html">Уже есть аккаунт</a>
+  </main>
+  <script src="/js/auth.js"></script>
+</body>
+</html>
