@@ -202,22 +202,24 @@ function registerSocket(io) {
     });
 
     socket.on('typing:start', ({ chatType, chatId }) => {
-      const payload = { user: publicUser(socket.user), chatType, chatId: Number(chatId) };
+      const targetId = Number(chatId);
+      const payload = { user: publicUser(socket.user), chatType, chatId: targetId, fromUserId: userId, toUserId: targetId };
       if (chatType === 'room' && canAccessRoom(chatId, userId)) socket.to(`room:${Number(chatId)}`).emit('typing:update', { ...payload, typing: true });
-      if (chatType === 'private') socket.to(`user:${Number(chatId)}`).emit('typing:update', { ...payload, typing: true });
+      if (chatType === 'private' && targetId !== userId && q.findUserById.get(targetId)) socket.to(`user:${targetId}`).emit('typing:update', { ...payload, typing: true });
       const key = `${socket.id}:${chatType}:${chatId}`;
       clearTimeout(typingTimers.get(key));
       typingTimers.set(key, setTimeout(() => {
-        if (chatType === 'room') socket.to(`room:${Number(chatId)}`).emit('typing:update', { ...payload, typing: false });
-        if (chatType === 'private') socket.to(`user:${Number(chatId)}`).emit('typing:update', { ...payload, typing: false });
+        if (chatType === 'room') socket.to(`room:${targetId}`).emit('typing:update', { ...payload, typing: false });
+        if (chatType === 'private') socket.to(`user:${targetId}`).emit('typing:update', { ...payload, typing: false });
         typingTimers.delete(key);
       }, 2500));
     });
 
     socket.on('typing:stop', ({ chatType, chatId }) => {
-      const payload = { user: publicUser(socket.user), chatType, chatId: Number(chatId), typing: false };
-      if (chatType === 'room') socket.to(`room:${Number(chatId)}`).emit('typing:update', payload);
-      if (chatType === 'private') socket.to(`user:${Number(chatId)}`).emit('typing:update', payload);
+      const targetId = Number(chatId);
+      const payload = { user: publicUser(socket.user), chatType, chatId: targetId, fromUserId: userId, toUserId: targetId, typing: false };
+      if (chatType === 'room') socket.to(`room:${targetId}`).emit('typing:update', payload);
+      if (chatType === 'private') socket.to(`user:${targetId}`).emit('typing:update', payload);
     });
 
     socket.on('disconnect', () => {

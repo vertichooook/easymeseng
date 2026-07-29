@@ -180,6 +180,8 @@ function setHeader() {
 async function openRoom(room) {
   if (!room) return;
   if (state.chat.type === 'room' && state.socket) state.socket.emit('room:leave', { roomId: state.chat.id });
+  state.typing.clear();
+  el.typing.textContent = '';
   state.chat = { type: 'room', id: room.id, title: room.name };
   state.replyTo = null;
   state.unread.delete(chatKey('room', room.id));
@@ -194,6 +196,8 @@ async function openRoom(room) {
 
 async function openPrivate(user) {
   if (!user) return;
+  state.typing.clear();
+  el.typing.textContent = '';
   state.chat = { type: 'private', id: user.id, title: user.username };
   state.replyTo = null;
   state.unread.delete(chatKey('private', user.id));
@@ -311,7 +315,11 @@ function setupSocket() {
   state.socket.on('message:removed', (event) => removeMessage(event.messageId, event.chatType));
   state.socket.on('message:deleted', (event) => removeMessage(event.message?.id, event.chatType));
   state.socket.on('typing:update', (event) => {
-    const key = `${event.chatType}:${event.chatId}:${event.user.id}`;
+    const relevant = event.chatType === 'room'
+      ? state.chat.type === 'room' && state.chat.id === event.chatId
+      : state.chat.type === 'private' && state.chat.id === event.fromUserId;
+    if (!relevant) return;
+    const key = `${event.chatType}:${event.fromUserId || event.user.id}`;
     if (event.typing) state.typing.set(key, displayName(event.user));
     else state.typing.delete(key);
     el.typing.textContent = Array.from(state.typing.values()).slice(0, 2).join(', ');
