@@ -352,20 +352,50 @@ function previewVideo(file) {
   });
 }
 
-function sendMessage(body, attachment = null) {
-  if (state.chat.type === 'empty') return toast('Сначала выберите или создайте чат.');
+function hasRenderedMessage(type, id) {
+  return Boolean(document.querySelector(`[data-message-type="${type}"][data-message-id="${id}"]`));
+}
+
+function sendMessageAsync(body, attachment = null) {
+  if (state.chat.type === 'empty') {
+    toast('Сначала выберите или создайте чат.');
+    return Promise.reject(new Error('Чат не выбран.'));
+  }
   const eventName = state.chat.type === 'room' ? 'message:send' : 'private:send';
   const payload = state.chat.type === 'room'
     ? { roomId: state.chat.id, body, attachment, replyTo: state.replyTo }
     : { receiverId: state.chat.id, body, attachment, replyTo: state.replyTo };
-  state.socket.emit(eventName, payload, (ack) => {
-    if (ack?.error) toast(ack.error);
-    else {
+  return new Promise((resolve, reject) => {
+    if (!state.socket?.connected) {
+      const error = new Error('Нет подключения к серверу.');
+      toast(error.message);
+      reject(error);
+      return;
+    }
+    state.socket.timeout(8000).emit(eventName, payload, (error, ack) => {
+      if (error) {
+        const timeoutError = new Error('Сервер не подтвердил отправку. Проверьте подключение.');
+        toast(timeoutError.message);
+        reject(timeoutError);
+        return;
+      }
+      if (ack?.error) {
+        const ackError = new Error(ack.error);
+        toast(ackError.message);
+        reject(ackError);
+        return;
+      }
+      if (ack?.message && !hasRenderedMessage(state.chat.type, ack.message.id)) addMessage(ack.message, state.chat.type);
       el.input.value = '';
       state.replyTo = null;
       updateReplyBar();
-    }
+      resolve(ack?.message || null);
+    });
   });
+}
+
+function sendMessage(body, attachment = null) {
+  sendMessageAsync(body, attachment).catch(() => {});
 }
 
 function bumpUnread(type, id, mentioned = false) {
@@ -673,7 +703,9 @@ async function startRecording(kind) {
         const file = new File([new Blob(state.chunks, { type })], `${kind}-${Date.now()}.${ext}`, { type });
         if (!await previewVideo(file)) return;
         toast('Отправляю видеосообщение...');
-        sendMessage('', await uploadFile(file));
+        const attachment = await uploadFile(file);
+        await sendMessageAsync('', attachment);
+        toast('Видеосообщение отправлено.');
       } catch (error) {
         toast(error.message || 'Не удалось отправить запись.');
       } finally {
