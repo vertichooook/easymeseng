@@ -28,6 +28,13 @@ app.use(helmet({
       'script-src': ["'self'", 'https://cdn.socket.io'],
       'connect-src': ["'self'", 'ws:', 'wss:']
     }
+  },
+  permissionsPolicy: {
+    features: {
+      camera: ['self'],
+      microphone: ['self'],
+      geolocation: []
+    }
   }
 }));
 app.use(morgan(config.isProduction ? 'combined' : 'dev'));

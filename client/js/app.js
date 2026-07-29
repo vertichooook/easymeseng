@@ -16,6 +16,8 @@ const state = {
   recordStarting: false,
   stopAfterStart: false,
   recordingKind: null,
+  recordingStartedAt: 0,
+  recordStopTimer: null,
   typing: new Map(),
   recorder: null,
   chunks: [],
@@ -512,6 +514,33 @@ function canRecordVideoMessage() {
   return mobileUa || (touchDevice && window.matchMedia('(pointer: coarse)').matches) || window.innerWidth <= 760;
 }
 
+function mediaConstraints(kind) {
+  return kind === 'video'
+    ? { audio: true, video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } } }
+    : { audio: { echoCancellation: true, noiseSuppression: true } };
+}
+
+async function requestMediaStream(kind) {
+  try {
+    return await navigator.mediaDevices.getUserMedia(mediaConstraints(kind));
+  } catch (error) {
+    if (kind !== 'video') throw error;
+    return navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+  }
+}
+
+async function primeMediaPermission(kind) {
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) return;
+  try {
+    const stream = await requestMediaStream(kind);
+    stream.getTracks().forEach((track) => track.stop());
+    toast(kind === 'video' ? 'Камера готова. Удерживайте кнопку для записи кружка.' : 'Микрофон готов.');
+  } catch (error) {
+    if (error.name === 'NotAllowedError') toast('Камера заблокирована. Проверьте HTTPS и Permissions-Policy в Nginx.');
+    else toast('Не удалось получить доступ к камере или микрофону.');
+  }
+}
+
 async function startRecording(kind) {
   if (state.recordStarting || state.recorder?.state === 'recording') return;
   state.recordStarting = true;
@@ -527,16 +556,7 @@ async function startRecording(kind) {
       return toast('Этот браузер не поддерживает запись аудио или видео.');
     }
     toast(kind === 'video' ? 'Разрешите доступ к камере и микрофону.' : 'Разрешите доступ к микрофону.');
-    const constraints = kind === 'video'
-      ? { audio: true, video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } } }
-      : { audio: { echoCancellation: true, noiseSuppression: true } };
-    let stream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
-    } catch (error) {
-      if (kind !== 'video') throw error;
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-    }
+    const stream = await requestMediaStream(kind);
     state.chunks = [];
     const audioTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'];
     const videoTypes = ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
@@ -563,22 +583,27 @@ async function startRecording(kind) {
         state.recordStarting = false;
         state.stopAfterStart = false;
         state.recordingKind = null;
+        state.recordingStartedAt = 0;
+        clearTimeout(state.recordStopTimer);
+        state.recordStopTimer = null;
         updateRecordButton();
       }
     };
-    state.recorder.start();
+    state.recorder.start(250);
+    state.recordingStartedAt = Date.now();
     state.recordStarting = false;
     el.recordButton.classList.add('recording');
     toast(kind === 'video' ? 'Идёт запись видео. Отпустите кнопку для отправки.' : 'Идёт запись голоса. Отпустите кнопку для отправки.');
     if (state.stopAfterStart) {
-      setTimeout(stopRecording, 120);
+      setTimeout(stopRecording, 1000);
     }
   } catch (error) {
     state.recordStarting = false;
     state.stopAfterStart = false;
     state.recordingKind = null;
+    state.recordingStartedAt = 0;
     el.recordButton.classList.remove('recording');
-    if (error.name === 'NotAllowedError') return toast('Доступ запрещён. Разрешите микрофон/камеру в настройках сайта.');
+    if (error.name === 'NotAllowedError') return toast('Камера заблокирована. Проверьте HTTPS и Permissions-Policy в Nginx.');
     if (error.name === 'NotFoundError') return toast('Микрофон или камера не найдены.');
     if (error.name === 'NotReadableError') return toast('Устройство уже используется другим приложением.');
     toast('Браузер не дал доступ к микрофону или камере.');
@@ -590,7 +615,21 @@ function stopRecording() {
     state.stopAfterStart = true;
     return;
   }
-  if (state.recorder?.state === 'recording') state.recorder.stop();
+  if (state.recorder?.state !== 'recording') return;
+  const elapsed = Date.now() - state.recordingStartedAt;
+  const finish = () => {
+    try {
+      state.recorder?.requestData?.();
+    } catch (_error) {
+      // Some mobile browsers throw if data is already being flushed.
+    }
+    setTimeout(() => {
+      if (state.recorder?.state === 'recording') state.recorder.stop();
+    }, 80);
+  };
+  clearTimeout(state.recordStopTimer);
+  if (elapsed < 1000) state.recordStopTimer = setTimeout(finish, 1000 - elapsed);
+  else finish();
 }
 
 function resetRecordPress() {
@@ -630,6 +669,7 @@ el.recordButton.addEventListener('pointerup', (event) => {
     state.recordMode = state.recordMode === 'audio' ? 'video' : 'audio';
     updateRecordButton();
     toast(state.recordMode === 'audio' ? 'Режим: голосовое сообщение.' : 'Режим: видеосообщение.');
+    if (state.recordMode === 'video') void primeMediaPermission('video');
   }
   resetRecordPress();
 });
