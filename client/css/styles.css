@@ -1605,6 +1605,10 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   border-bottom: 1px solid var(--line);
 }
 
+.sidebar [hidden] {
+  display: none !important;
+}
+
 .sidebar .section-title {
   color: var(--muted);
 }
@@ -1624,6 +1628,29 @@ dialog[open] { animation: modalIn 0.16s ease both; }
 
 .sidebar .list-item small {
   color: var(--muted);
+}
+
+.people-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.people-search input {
+  min-height: 42px;
+  border-radius: 14px;
+  background: var(--panel-2);
+}
+
+.people-search button {
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 14px;
+}
+
+.people-results .muted-text {
+  padding: 10px;
 }
 
 .profile-mini {

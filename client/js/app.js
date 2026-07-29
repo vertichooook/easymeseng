@@ -31,6 +31,10 @@ const el = {
   sidebar: document.querySelector('#sidebar'),
   rooms: document.querySelector('#roomsList'),
   users: document.querySelector('#usersList'),
+  peopleSearchInput: document.querySelector('#peopleSearchInput'),
+  peopleSearchButton: document.querySelector('#peopleSearchButton'),
+  peopleContactsList: document.querySelector('#peopleContactsList'),
+  peopleSearchResults: document.querySelector('#peopleSearchResults'),
   messages: document.querySelector('#messages'),
   title: document.querySelector('#chatTitle'),
   chatAvatar: document.querySelector('#chatAvatar'),
@@ -196,6 +200,40 @@ function renderLists() {
       <small><i class="dot ${state.onlineIds.has(user.id) ? 'online' : ''}"></i>${state.onlineIds.has(user.id) ? 'online' : 'offline'}</small>
     </button>
   `).join('');
+  if (el.peopleContactsList) {
+    el.peopleContactsList.innerHTML = state.users.length
+      ? state.users.map((user) => `
+        <button class="list-item ${state.chat.type === 'private' && state.chat.id === user.id ? 'active' : ''}" data-user="${user.id}">
+          ${avatar(user, 'small')}
+          <span>${escapeHtml(displayName(user))}</span>
+          <small>@${escapeHtml(user.username)}</small>
+        </button>
+      `).join('')
+      : '<p class="muted-text">Контактов пока нет.</p>';
+  }
+}
+
+function setSidebarMode(mode) {
+  document.querySelectorAll('[data-sidebar-panel]').forEach((panel) => {
+    panel.hidden = panel.dataset.sidebarPanel !== mode;
+  });
+  document.querySelectorAll('[data-rail-action]').forEach((item) => {
+    item.classList.toggle('active', item.dataset.railAction === mode);
+  });
+  el.sidebar.classList.toggle('open', innerWidth < 760);
+}
+
+function renderPeopleSearchResults(users) {
+  if (!el.peopleSearchResults) return;
+  el.peopleSearchResults.innerHTML = users.length
+    ? users.map((user) => `
+      <button class="list-item" type="button" data-people-user="${user.id}">
+        ${avatar(user, 'small')}
+        <span>${escapeHtml(displayName(user))}</span>
+        <small>@${escapeHtml(user.username)}</small>
+      </button>
+    `).join('')
+    : '<p class="muted-text">Ничего не найдено.</p>';
 }
 
 function bodyHtml(body) {
@@ -1082,17 +1120,15 @@ document.querySelector('#copyUsernameButton').onclick = async () => {
 
 document.querySelectorAll('[data-rail-action]').forEach((button) => {
   button.addEventListener('click', () => {
-    document.querySelectorAll('[data-rail-action]').forEach((item) => item.classList.toggle('active', item === button));
     const action = button.dataset.railAction;
     if (action === 'chats') {
-      el.sidebar.classList.toggle('open');
+      setSidebarMode('chats');
     }
     if (action === 'rooms') {
-      document.querySelector('#roomModal')?.showModal();
+      setSidebarMode('rooms');
     }
-    if (action === 'users') {
-      el.sidebar.classList.add('open');
-      document.querySelector('#usersList')?.scrollIntoView({ block: 'center' });
+    if (action === 'people') {
+      setSidebarMode('people');
     }
   });
 });
@@ -1124,6 +1160,52 @@ function renderUserSearchResults(users) {
       </button>
     `).join('')
     : '<p class="muted-text">Ничего не найдено.</p>';
+}
+
+let peopleSearchTimer = null;
+async function runPeopleSearch() {
+  renderPeopleSearchResults(await searchUsers(el.peopleSearchInput.value));
+}
+
+if (el.peopleSearchInput) {
+  el.peopleSearchInput.addEventListener('input', () => {
+    clearTimeout(peopleSearchTimer);
+    peopleSearchTimer = setTimeout(async () => {
+      try {
+        await runPeopleSearch();
+      } catch (error) {
+        toast(error.message);
+      }
+    }, 250);
+  });
+}
+
+if (el.peopleSearchButton) {
+  el.peopleSearchButton.addEventListener('click', async () => {
+    try {
+      await runPeopleSearch();
+    } catch (error) {
+      toast(error.message);
+    }
+  });
+}
+
+if (el.peopleSearchResults) {
+  el.peopleSearchResults.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-people-user]');
+    if (!button) return;
+    const userId = Number(button.dataset.peopleUser);
+    let user = state.users.find((item) => item.id === userId);
+    if (!user) {
+      user = (await searchUsers(button.querySelector('small')?.textContent || '')).find((item) => item.id === userId);
+      if (user && !state.users.some((item) => item.id === user.id)) {
+        state.users.push(user);
+        state.users.sort((a, b) => a.username.localeCompare(b.username));
+        renderLists();
+      }
+    }
+    if (user) openPrivate(user);
+  });
 }
 
 el.chatHeaderButton.onclick = async () => {
@@ -1256,6 +1338,7 @@ document.querySelector('#closeSidebar').onclick = () => el.sidebar.classList.rem
     await refreshData();
     setupSocket();
     await openRoom(state.rooms[0]);
+    setSidebarMode('rooms');
     if (!state.me.display_name) document.querySelector('#profileButton').click();
     el.loadingScreen.classList.add('done');
   } catch (_error) {

@@ -31,7 +31,7 @@
       <button class="rail-button" type="button" data-rail-action="rooms" title="Rooms" aria-label="Rooms">
         <span class="rail-icon rail-rooms"></span>
       </button>
-      <button class="rail-button" type="button" data-rail-action="users" title="People" aria-label="People">
+      <button class="rail-button" type="button" data-rail-action="people" title="People" aria-label="People">
         <span class="rail-icon rail-users"></span>
       </button>
       <button id="settingsButton" class="rail-button rail-bottom" type="button" title="Settings" aria-label="Settings">
@@ -47,16 +47,25 @@
         </div>
         <button id="closeSidebar" class="icon-button ghost" type="button" title="Закрыть">×</button>
       </div>
-      <section class="panel-section">
+      <section class="panel-section rooms-panel" data-sidebar-panel="rooms">
         <div class="section-title">
           <span>Комнаты</span>
           <button id="openRoomModal" class="icon-button" type="button" title="Создать комнату">+</button>
         </div>
         <div id="roomsList" class="list"></div>
       </section>
-      <section class="panel-section users-section">
-        <div class="section-title"><span>Пользователи</span></div>
+      <section class="panel-section users-section" data-sidebar-panel="chats">
+        <div class="section-title"><span>Личные сообщения</span></div>
         <div id="usersList" class="list"></div>
+      </section>
+      <section class="panel-section people-section" data-sidebar-panel="people" hidden>
+        <div class="section-title"><span>People</span></div>
+        <label class="people-search">
+          <input id="peopleSearchInput" type="search" autocomplete="off" placeholder="@username">
+          <button id="peopleSearchButton" type="button">Найти</button>
+        </label>
+        <div id="peopleContactsList" class="list people-contacts"></div>
+        <div id="peopleSearchResults" class="list people-results"></div>
       </section>
       <section class="profile-mini">
         <button id="profileButton" type="button"></button>
