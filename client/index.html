@@ -7,6 +7,21 @@
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
+  <div id="loadingScreen" class="loading-screen">
+    <div class="loading-desktop">
+      <span class="logo-mark large">N</span>
+      <div>
+        <strong>Nexus</strong>
+        <p>Подключаем чаты и синхронизируем сообщения</p>
+      </div>
+    </div>
+    <div class="loading-mobile">
+      <span class="logo-mark large">N</span>
+      <strong>Nexus</strong>
+      <p>Готовим мобильный чат</p>
+    </div>
+  </div>
+
   <div class="app-shell">
     <aside id="sidebar" class="sidebar">
       <div class="brand">
@@ -66,6 +81,7 @@
 
   <div id="recordPreviewOverlay" class="record-preview-overlay" hidden>
     <video id="recordLivePreview" class="record-live-preview" autoplay muted playsinline></video>
+    <button id="switchCameraButton" class="camera-switch-button" type="button" title="Сменить камеру" aria-label="Сменить камеру">↻</button>
     <div class="record-preview-status">
       <span class="record-dot"></span>
       <span id="recordTimer">00:00</span>

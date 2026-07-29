@@ -74,6 +74,53 @@ button:active { transform: translateY(1px) scale(0.98); }
   grid-template-columns: 310px 1fr;
   height: 100vh;
 }
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 20% 16%, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 30%),
+    radial-gradient(circle at 78% 22%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 28%),
+    var(--bg);
+  color: var(--text);
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+.loading-screen.done {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.loading-desktop,
+.loading-mobile {
+  align-items: center;
+  gap: 16px;
+  animation: loadingIn 0.24s ease both;
+}
+.loading-desktop {
+  display: flex;
+  padding: 26px 30px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+.loading-mobile {
+  display: none;
+  text-align: center;
+  justify-items: center;
+}
+.loading-screen strong {
+  display: block;
+  font-size: 26px;
+}
+.loading-screen p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
 .sidebar {
   background: var(--panel);
   border-right: 1px solid var(--line);
@@ -279,7 +326,7 @@ mark {
 }
 .composer {
   display: grid;
-  grid-template-columns: auto auto 1fr auto;
+  grid-template-columns: auto auto auto 1fr auto;
   gap: 10px;
   padding: 14px;
   background: var(--panel);
@@ -502,17 +549,29 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   max-width: min(520px, 100%);
   max-height: 360px;
   margin-top: 8px;
-  border-radius: 8px;
+  border-radius: 16px;
   border: 1px solid var(--line);
   background: #000;
+  box-shadow: 0 12px 28px rgb(0 0 0 / 0.12);
 }
 .image-media {
   background: transparent;
   object-fit: contain;
 }
 .audio-media {
+  width: min(360px, 100%);
   max-height: 54px;
   background: transparent;
+  border-radius: 999px;
+  padding: 6px;
+}
+.video-message-media {
+  width: min(250px, 62vw);
+  height: min(250px, 62vw);
+  max-height: none;
+  border-radius: 50%;
+  object-fit: cover;
+  overflow: hidden;
 }
 .record-preview-overlay {
   position: fixed;
@@ -554,6 +613,24 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   font-size: 13px;
   font-weight: 700;
 }
+.camera-switch-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.5);
+  color: white;
+  border: 1px solid rgb(255 255 255 / 0.24);
+  backdrop-filter: blur(8px);
+}
+.camera-switch-button:hover {
+  background: rgb(0 0 0 / 0.68);
+}
 .record-dot {
   width: 8px;
   height: 8px;
@@ -591,6 +668,14 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   overflow: hidden;
   user-select: none;
   touch-action: none;
+}
+.camera-mode-button {
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+}
+.camera-mode-button[hidden] {
+  display: none !important;
 }
 .media-icon::before,
 .media-icon::after {
@@ -670,6 +755,11 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+@keyframes loadingIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
@@ -692,7 +782,7 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   .menu-button, #closeSidebar { display: grid; }
   .message { max-width: 96%; }
   .composer {
-    grid-template-columns: auto auto 1fr;
+    grid-template-columns: auto auto auto 1fr;
   }
   #sendButton { grid-column: 1 / -1; }
   .chat-actions { gap: 5px; }
@@ -700,6 +790,13 @@ dialog[open] { animation: modalIn 0.16s ease both; }
     right: 14px;
     bottom: 118px;
     width: min(190px, 58vw);
+  }
+  .loading-desktop { display: none; }
+  .loading-mobile { display: grid; }
+  .loading-screen {
+    background:
+      radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 28%),
+      var(--bg);
   }
 }
 

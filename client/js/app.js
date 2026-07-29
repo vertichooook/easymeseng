@@ -20,6 +20,7 @@ const state = {
   recordStopTimer: null,
   recordTimerInterval: null,
   recordStream: null,
+  cameraFacing: 'user',
   typing: new Map(),
   recorder: null,
   chunks: [],
@@ -52,6 +53,9 @@ const el = {
   recordPreviewOverlay: document.querySelector('#recordPreviewOverlay'),
   recordLivePreview: document.querySelector('#recordLivePreview'),
   recordTimer: document.querySelector('#recordTimer'),
+  switchCameraButton: document.querySelector('#switchCameraButton'),
+  cameraModeButton: null,
+  loadingScreen: document.querySelector('#loadingScreen'),
   settingsModal: document.querySelector('#settingsModal'),
   roomSettingsModal: document.querySelector('#roomSettingsModal'),
   roomSettingsForm: document.querySelector('#roomSettingsForm'),
@@ -91,6 +95,20 @@ el.toastClose.onclick = () => {
   clearTimeout(toastTimer);
   el.toast.classList.remove('show');
 };
+
+function setupCameraModeButton() {
+  el.cameraModeButton = document.createElement('button');
+  el.cameraModeButton.id = 'cameraModeButton';
+  el.cameraModeButton.className = 'icon-button ghost camera-mode-button';
+  el.cameraModeButton.type = 'button';
+  el.cameraModeButton.title = 'Сменить камеру';
+  el.cameraModeButton.setAttribute('aria-label', 'Сменить камеру');
+  el.cameraModeButton.textContent = '↻';
+  el.cameraModeButton.hidden = true;
+  el.recordButton.before(el.cameraModeButton);
+}
+
+setupCameraModeButton();
 
 function avatar(entity, size = '') {
   const cls = `avatar ${size}`;
@@ -146,7 +164,10 @@ function attachmentHtml(message) {
   const url = escapeHtml(message.attachment_url);
   const name = escapeHtml(message.attachment_name || 'media');
   if (message.attachment_type === 'image') return `<img class="media image-media" src="${url}" alt="${name}">`;
-  if (message.attachment_type === 'video') return `<video class="media" src="${url}" controls playsinline></video>`;
+  if (message.attachment_type === 'video') {
+    const circle = /^video-\d+\.(webm|mp4|mov|3gp)$/i.test(message.attachment_name || '');
+    return `<video class="media ${circle ? 'video-message-media' : 'video-file-media'}" src="${url}" controls playsinline preload="metadata"></video>`;
+  }
   if (message.attachment_type === 'audio') return `<audio class="media audio-media" src="${url}" controls></audio>`;
   return `<a href="${url}" target="_blank" rel="noopener">${name}</a>`;
 }
@@ -599,6 +620,7 @@ el.fileInput.addEventListener('change', async () => {
 function updateRecordButton() {
   if (state.recordStarting || state.recorder?.state === 'recording') return;
   if (!canRecordVideoMessage()) state.recordMode = 'audio';
+  if (el.cameraModeButton) el.cameraModeButton.hidden = state.recordMode !== 'video' || !canRecordVideoMessage();
   el.recordButton.classList.toggle('mic-icon', state.recordMode === 'audio');
   el.recordButton.classList.toggle('video-icon', state.recordMode === 'video');
   el.recordButton.title = state.recordMode === 'audio'
@@ -612,18 +634,23 @@ function canRecordVideoMessage() {
   return mobileUa || (touchDevice && window.matchMedia('(pointer: coarse)').matches) || window.innerWidth <= 760;
 }
 
-function mediaConstraints(kind) {
+function mediaConstraints(kind, facing = state.cameraFacing) {
   return kind === 'video'
-    ? { audio: true, video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } } }
+    ? { audio: true, video: { facingMode: { ideal: facing }, width: { ideal: 480 }, height: { ideal: 480 } } }
     : { audio: { echoCancellation: true, noiseSuppression: true } };
 }
 
-async function requestMediaStream(kind) {
+async function requestMediaStream(kind, preferredFacing = state.cameraFacing) {
   try {
-    return await navigator.mediaDevices.getUserMedia(mediaConstraints(kind));
+    return await navigator.mediaDevices.getUserMedia(mediaConstraints(kind, preferredFacing));
   } catch (error) {
     if (kind !== 'video') throw error;
-    return navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+    const fallbackFacing = preferredFacing === 'user' ? 'environment' : 'user';
+    try {
+      return await navigator.mediaDevices.getUserMedia(mediaConstraints('video', fallbackFacing));
+    } catch (_fallbackError) {
+      return navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+    }
   }
 }
 
@@ -650,13 +677,23 @@ function updateRecordTimer() {
   el.recordTimer.textContent = formatDuration(Date.now() - state.recordingStartedAt);
 }
 
-function showLiveRecordPreview(stream) {
+async function showLiveRecordPreview(stream) {
   state.recordStream = stream;
   el.recordLivePreview.srcObject = stream;
   el.recordPreviewOverlay.hidden = false;
   el.recordTimer.textContent = '00:00';
   clearInterval(state.recordTimerInterval);
   state.recordTimerInterval = setInterval(updateRecordTimer, 250);
+  try {
+    await el.recordLivePreview.play();
+    setTimeout(() => {
+      if (!el.recordPreviewOverlay.hidden && (!el.recordLivePreview.videoWidth || !el.recordLivePreview.videoHeight)) {
+        toast('Предпросмотр камеры пустой. Нажмите ↻ и попробуйте другую камеру.');
+      }
+    }, 1100);
+  } catch (_error) {
+    toast('Камера открыта, но браузер не показал предпросмотр. Попробуйте сменить камеру.');
+  }
 }
 
 function hideLiveRecordPreview() {
@@ -666,6 +703,11 @@ function hideLiveRecordPreview() {
   el.recordLivePreview.srcObject = null;
   el.recordPreviewOverlay.hidden = true;
   state.recordStream = null;
+}
+
+function switchCameraPreference() {
+  state.cameraFacing = state.cameraFacing === 'user' ? 'environment' : 'user';
+  toast(state.cameraFacing === 'user' ? 'Камера: фронтальная.' : 'Камера: основная.');
 }
 
 async function startRecording(kind) {
@@ -803,7 +845,10 @@ el.recordButton.addEventListener('pointerup', (event) => {
     state.recordMode = state.recordMode === 'audio' ? 'video' : 'audio';
     updateRecordButton();
     toast(state.recordMode === 'audio' ? 'Режим: голосовое сообщение.' : 'Режим: видеосообщение.');
-    if (state.recordMode === 'video') void primeMediaPermission('video');
+    if (state.recordMode === 'video') {
+      toast('Режим: видеосообщение. Удерживайте для записи, ↻ сменит камеру в окне записи.');
+      void primeMediaPermission('video');
+    }
   }
   resetRecordPress();
 });
@@ -814,6 +859,19 @@ el.recordButton.addEventListener('pointercancel', () => {
   resetRecordPress();
 });
 el.recordButton.addEventListener('contextmenu', (event) => event.preventDefault());
+el.cameraModeButton.addEventListener('click', (event) => {
+  event.preventDefault();
+  switchCameraPreference();
+  void primeMediaPermission('video');
+});
+el.switchCameraButton.addEventListener('click', (event) => {
+  event.preventDefault();
+  if (state.recorder?.state === 'recording' || state.recordStarting) {
+    toast('Сменить камеру можно перед новой записью.');
+    return;
+  }
+  switchCameraPreference();
+});
 updateRecordButton();
 window.addEventListener('resize', updateRecordButton);
 
@@ -1007,6 +1065,7 @@ document.querySelector('#closeSidebar').onclick = () => el.sidebar.classList.rem
     setupSocket();
     await openRoom(state.rooms[0]);
     if (!state.me.display_name) document.querySelector('#profileButton').click();
+    el.loadingScreen.classList.add('done');
   } catch (_error) {
     location.href = '/login.html';
   }
