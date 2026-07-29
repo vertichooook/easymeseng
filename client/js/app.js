@@ -170,6 +170,24 @@ function updateReplyBar() {
   el.replyBar.innerHTML = `<span>Ответ ${escapeHtml(state.replyTo.author)}: ${escapeHtml(state.replyTo.body)}</span><button type="button" data-cancel-reply>×</button>`;
 }
 
+function activeTypingKey() {
+  return chatKey(state.chat.type, state.chat.id);
+}
+
+function eventTypingKey(event) {
+  if (event.chatType === 'room') return chatKey('room', event.chatId);
+  return chatKey('private', event.fromUserId);
+}
+
+function renderTyping() {
+  const activeKey = activeTypingKey();
+  const names = Array.from(state.typing.values())
+    .filter((item) => item.chatKey === activeKey)
+    .map((item) => item.name)
+    .slice(0, 2);
+  el.typing.textContent = names.length ? `${names.join(', ')} печатает...` : '';
+}
+
 function setHeader() {
   const item = currentItem();
   el.title.textContent = state.chat.type === 'room' ? `# ${state.chat.title}` : displayName(item);
@@ -180,9 +198,8 @@ function setHeader() {
 async function openRoom(room) {
   if (!room) return;
   if (state.chat.type === 'room' && state.socket) state.socket.emit('room:leave', { roomId: state.chat.id });
-  state.typing.clear();
-  el.typing.textContent = '';
   state.chat = { type: 'room', id: room.id, title: room.name };
+  renderTyping();
   state.replyTo = null;
   state.unread.delete(chatKey('room', room.id));
   updateReplyBar();
@@ -196,9 +213,8 @@ async function openRoom(room) {
 
 async function openPrivate(user) {
   if (!user) return;
-  state.typing.clear();
-  el.typing.textContent = '';
   state.chat = { type: 'private', id: user.id, title: user.username };
+  renderTyping();
   state.replyTo = null;
   state.unread.delete(chatKey('private', user.id));
   updateReplyBar();
@@ -315,15 +331,11 @@ function setupSocket() {
   state.socket.on('message:removed', (event) => removeMessage(event.messageId, event.chatType));
   state.socket.on('message:deleted', (event) => removeMessage(event.message?.id, event.chatType));
   state.socket.on('typing:update', (event) => {
-    const relevant = event.chatType === 'room'
-      ? state.chat.type === 'room' && state.chat.id === event.chatId
-      : state.chat.type === 'private' && state.chat.id === event.fromUserId;
-    if (!relevant) return;
-    const key = `${event.chatType}:${event.fromUserId || event.user.id}`;
-    if (event.typing) state.typing.set(key, displayName(event.user));
+    const scopedChatKey = eventTypingKey(event);
+    const key = `${scopedChatKey}:${event.fromUserId || event.user.id}`;
+    if (event.typing) state.typing.set(key, { chatKey: scopedChatKey, name: displayName(event.user) });
     else state.typing.delete(key);
-    el.typing.textContent = Array.from(state.typing.values()).slice(0, 2).join(', ');
-    if (el.typing.textContent) el.typing.textContent += ' печатает...';
+    renderTyping();
   });
 }
 
