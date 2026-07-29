@@ -290,12 +290,39 @@ async function refreshData() {
 
 async function uploadFile(file) {
   const form = new FormData();
-  form.append('file', file);
-  return (await api('/api/uploads', { method: 'POST', body: form })).attachment;
+  form.append('file', normalizeUploadFile(file));
+  const attachment = (await api('/api/uploads', { method: 'POST', body: form })).attachment;
+  return attachment;
 }
 
 function isVideoFile(file) {
   return file?.type?.startsWith('video/') || /\.(webm|mp4|mov|3gp)$/i.test(file?.name || '');
+}
+
+function mimeFromFilename(filename) {
+  const ext = String(filename || '').split('.').pop().toLowerCase();
+  return {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    gif: 'image/gif',
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    mov: 'video/quicktime',
+    '3gp': 'video/3gpp',
+    m4a: 'audio/mp4',
+    aac: 'audio/aac',
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav'
+  }[ext] || '';
+}
+
+function normalizeUploadFile(file) {
+  if (file?.type) return file;
+  const type = mimeFromFilename(file?.name);
+  if (!type) return file;
+  return new File([file], file.name, { type, lastModified: file.lastModified || Date.now() });
 }
 
 function previewVideo(file) {
@@ -645,6 +672,7 @@ async function startRecording(kind) {
         if (!state.chunks.length) return toast('Запись получилась пустой. Попробуйте удерживать кнопку дольше.');
         const file = new File([new Blob(state.chunks, { type })], `${kind}-${Date.now()}.${ext}`, { type });
         if (!await previewVideo(file)) return;
+        toast('Отправляю видеосообщение...');
         sendMessage('', await uploadFile(file));
       } catch (error) {
         toast(error.message || 'Не удалось отправить запись.');
