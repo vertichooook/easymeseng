@@ -326,17 +326,24 @@ mark {
 }
 .composer {
   display: grid;
-  grid-template-columns: auto auto auto minmax(360px, 920px);
+  grid-template-columns: auto auto auto minmax(0, 1fr);
   gap: 10px;
   padding: 14px;
   background: var(--panel);
   border-top: 1px solid var(--line);
   transition: background-color 0.18s ease, border-color 0.18s ease;
-  align-items: end;
-  justify-content: center;
+  align-items: center;
 }
 #sendButton {
   display: none;
+}
+.composer .icon-button {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+.composer textarea {
+  align-self: center;
 }
 .reply-bar {
   grid-column: 1 / -1;
@@ -371,6 +378,7 @@ textarea, input {
 }
 textarea {
   min-height: 42px;
+  height: 42px;
   max-height: 120px;
 }
 textarea:focus, input:focus {
