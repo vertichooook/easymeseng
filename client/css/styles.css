@@ -1439,3 +1439,337 @@ dialog[open] { animation: modalIn 0.16s ease both; }
     bottom: max(12px, env(safe-area-inset-bottom));
   }
 }
+
+/* Concept 3: workspace rail + inspector */
+.app-shell {
+  grid-template-columns: 76px 326px minmax(0, 1fr) 286px;
+  gap: 0;
+  background:
+    linear-gradient(90deg, var(--sidebar) 0 76px, transparent 76px),
+    var(--canvas);
+}
+
+.nav-rail {
+  min-height: 0;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #edf4f4;
+  background: var(--sidebar);
+  border-right: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.nav-rail .logo-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  margin-bottom: 10px;
+}
+
+.rail-button {
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  color: rgb(237 244 244 / 0.74);
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.rail-button:hover,
+.rail-button.active {
+  color: #fff;
+  background: rgb(255 255 255 / 0.12);
+  border-color: rgb(255 255 255 / 0.10);
+}
+
+.rail-bottom {
+  margin-top: auto;
+}
+
+.rail-icon {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.rail-chat::before {
+  content: "";
+  position: absolute;
+  inset: 3px 2px 5px;
+  border: 2px solid currentColor;
+  border-radius: 8px;
+}
+
+.rail-chat::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  bottom: 2px;
+  width: 7px;
+  height: 7px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-18deg);
+}
+
+.rail-rooms::before,
+.rail-users::before,
+.rail-settings::before {
+  content: "";
+  position: absolute;
+}
+
+.rail-rooms::before {
+  inset: 3px;
+  border: 2px solid currentColor;
+  border-radius: 6px;
+  box-shadow: 7px 7px 0 -3px currentColor;
+}
+
+.rail-users::before {
+  left: 3px;
+  top: 3px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  box-shadow: 9px 2px 0 -2px currentColor, 4px 13px 0 4px transparent;
+}
+
+.rail-users::after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 3px;
+  height: 9px;
+  border: 2px solid currentColor;
+  border-radius: 999px 999px 5px 5px;
+}
+
+.rail-settings::before {
+  inset: 2px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  box-shadow:
+    0 -8px 0 -6px currentColor,
+    0 8px 0 -6px currentColor,
+    8px 0 0 -6px currentColor,
+    -8px 0 0 -6px currentColor;
+}
+
+.rail-settings::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.nav-rail #settingsButton::before,
+.nav-rail #settingsButton::after {
+  content: none;
+}
+
+.sidebar {
+  border-right: 1px solid var(--line);
+  color: var(--text);
+  background: color-mix(in srgb, var(--panel) 92%, var(--canvas));
+}
+
+.sidebar .brand {
+  min-height: 76px;
+  color: var(--text);
+  border-bottom: 1px solid var(--line);
+}
+
+.sidebar .brand-lockup .logo-mark,
+.brand #settingsButton {
+  display: none;
+}
+
+.sidebar .brand .ghost,
+.sidebar .icon-button.ghost {
+  color: var(--text);
+  border-color: var(--line);
+  background: var(--panel-2);
+}
+
+.sidebar .panel-section {
+  border-top: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sidebar .section-title {
+  color: var(--muted);
+}
+
+.sidebar .list-item {
+  color: var(--text);
+  background: transparent;
+}
+
+.sidebar .list-item:hover,
+.sidebar .list-item.active {
+  color: var(--text);
+  background: var(--panel-2);
+  border-color: var(--line);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+
+.sidebar .list-item small {
+  color: var(--muted);
+}
+
+.profile-mini {
+  border-top: 1px solid var(--line);
+}
+
+.profile-mini button:first-child {
+  color: var(--text);
+}
+
+#logoutButton {
+  color: var(--text);
+  background: var(--panel-2);
+}
+
+.chat {
+  border-right: 1px solid var(--line);
+}
+
+.inspector-panel {
+  min-width: 0;
+  min-height: 0;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: color-mix(in srgb, var(--panel) 88%, var(--canvas));
+}
+
+.inspector-card,
+.inspector-note,
+.inspector-actions {
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+}
+
+.inspector-card {
+  justify-items: center;
+  text-align: center;
+}
+
+.inspector-avatar .avatar {
+  margin: 2px auto;
+}
+
+.inspector-card strong {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 20px;
+}
+
+.inspector-card span,
+.inspector-note {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.inspector-actions button {
+  width: 100%;
+  color: var(--text);
+  text-align: left;
+  background: var(--panel-2);
+}
+
+.inspector-actions button:hover {
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel-2));
+}
+
+.inspector-note span {
+  color: var(--accent);
+  font-weight: 850;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.inspector-note p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+@media (max-width: 1120px) {
+  .app-shell {
+    grid-template-columns: 72px 310px minmax(0, 1fr);
+  }
+
+  .inspector-panel {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    padding-bottom: 64px;
+  }
+
+  .chat {
+    height: calc(var(--app-height) - 64px);
+  }
+
+  .nav-rail {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 42;
+    height: 64px;
+    padding: 7px 14px max(7px, env(safe-area-inset-bottom));
+    flex-direction: row;
+    justify-content: center;
+    background: color-mix(in srgb, var(--sidebar) 94%, transparent);
+    border-top: 1px solid rgb(255 255 255 / 0.10);
+  }
+
+  .nav-rail .logo-mark {
+    display: none;
+  }
+
+  .rail-bottom {
+    margin-top: 0;
+  }
+
+  .rail-button {
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+  }
+
+  .sidebar {
+    color: var(--text);
+    background: var(--panel);
+  }
+
+  .composer {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+
+  .composer::before {
+    height: calc(100% - 72px);
+  }
+}

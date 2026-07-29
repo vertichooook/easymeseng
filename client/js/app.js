@@ -57,6 +57,12 @@ const el = {
   cameraModeButton: null,
   loadingScreen: document.querySelector('#loadingScreen'),
   settingsModal: document.querySelector('#settingsModal'),
+  inspectorAvatar: document.querySelector('#inspectorAvatar'),
+  inspectorTitle: document.querySelector('#inspectorTitle'),
+  inspectorMeta: document.querySelector('#inspectorMeta'),
+  inspectorSettingsButton: document.querySelector('#inspectorSettingsButton'),
+  inspectorNewRoomButton: document.querySelector('#inspectorNewRoomButton'),
+  inspectorProfileButton: document.querySelector('#inspectorProfileButton'),
   roomSettingsModal: document.querySelector('#roomSettingsModal'),
   roomSettingsForm: document.querySelector('#roomSettingsForm'),
   roomMembers: document.querySelector('#roomMembers'),
@@ -90,6 +96,11 @@ function markCurrentPrivateRead() {
   if (state.chat.type === 'private' && state.socket?.connected) {
     state.socket.emit('private:read', { userId: state.chat.id });
   }
+}
+
+function setConnectionStatus(status) {
+  if (el.status) el.status.textContent = status;
+  document.body.dataset.connection = status;
 }
 
 window.addEventListener('focus', markCurrentPrivateRead);
@@ -300,6 +311,13 @@ function setHeader() {
   el.title.textContent = state.chat.type === 'room' ? `# ${state.chat.title}` : displayName(item);
   el.chatAvatar.outerHTML = avatar(state.chat.type === 'room' ? item : item, 'small').replace('class="avatar small"', 'id="chatAvatar" class="avatar small"');
   el.chatAvatar = document.querySelector('#chatAvatar');
+  if (el.inspectorAvatar) el.inspectorAvatar.innerHTML = avatar(item, 'large');
+  if (el.inspectorTitle) el.inspectorTitle.textContent = state.chat.type === 'room' ? `# ${state.chat.title}` : displayName(item);
+  if (el.inspectorMeta) {
+    const type = state.chat.type === 'room' ? 'Room workspace' : `@${item?.username || 'user'}`;
+    const muted = currentChatMuted() ? ' · muted' : '';
+    el.inspectorMeta.textContent = `${type}${muted}`;
+  }
 }
 
 function showEmptyChat() {
@@ -310,6 +328,9 @@ function showEmptyChat() {
   el.title.textContent = 'Чатов пока нет';
   el.chatAvatar.outerHTML = '<span id="chatAvatar" class="avatar small">N</span>';
   el.chatAvatar = document.querySelector('#chatAvatar');
+  if (el.inspectorAvatar) el.inspectorAvatar.innerHTML = '<span class="avatar large">N</span>';
+  if (el.inspectorTitle) el.inspectorTitle.textContent = 'Nexus';
+  if (el.inspectorMeta) el.inspectorMeta.textContent = 'No active chat';
   el.messages.innerHTML = '<div class="empty-chat"><strong>Здесь пока пусто</strong><span>Создайте комнату или дождитесь приглашения.</span></div>';
   renderLists();
 }
@@ -339,9 +360,9 @@ async function openPrivate(user) {
   updateReplyBar();
   setHeader();
   renderLists();
+  state.socket?.emit('private:read', { userId: user.id });
   const data = await api(`/api/private/${user.id}/messages`);
   el.messages.innerHTML = data.messages.map((msg) => renderMessage(msg, 'private')).join('');
-  state.socket?.emit('private:read', { userId: user.id });
   el.messages.scrollTop = el.messages.scrollHeight;
 }
 
@@ -496,11 +517,11 @@ async function resolveForwardTargets(input) {
 function setupSocket() {
   state.socket = io({ path: '/socket.io' });
   state.socket.on('connect', () => {
-    el.status.textContent = 'online';
+    setConnectionStatus('online');
     if (state.chat.type === 'room') state.socket.emit('room:join', { roomId: state.chat.id });
     if (state.chat.type === 'private') markCurrentPrivateRead();
   });
-  state.socket.on('disconnect', () => { el.status.textContent = 'offline'; });
+  state.socket.on('disconnect', () => { setConnectionStatus('offline'); });
   state.socket.on('connect_error', (error) => toast(error.message));
   state.socket.on('presence:update', (users) => {
     state.onlineIds = new Set(users.map((user) => user.id));
@@ -1040,6 +1061,16 @@ document.querySelector('#copyUsernameButton').onclick = async () => {
   toast('Username скопирован.');
 };
 
+document.querySelectorAll('[data-rail-action]').forEach((button) => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('[data-rail-action]').forEach((item) => item.classList.toggle('active', item === button));
+    el.sidebar.classList.add('open');
+    const action = button.dataset.railAction;
+    if (action === 'rooms') document.querySelector('#roomsList')?.scrollIntoView({ block: 'center' });
+    if (action === 'users') document.querySelector('#usersList')?.scrollIntoView({ block: 'center' });
+  });
+});
+
 async function searchUsers(query) {
   const value = String(query || '').trim().replace(/^@/, '');
   if (value.length < 2) return [];
@@ -1185,6 +1216,9 @@ document.querySelector('#profileForm').addEventListener('submit', async (event) 
 });
 document.querySelector('#openSidebar').onclick = () => el.sidebar.classList.add('open');
 document.querySelector('#closeSidebar').onclick = () => el.sidebar.classList.remove('open');
+if (el.inspectorSettingsButton) el.inspectorSettingsButton.onclick = () => el.chatHeaderButton.click();
+if (el.inspectorNewRoomButton) el.inspectorNewRoomButton.onclick = () => document.querySelector('#openRoomModal').click();
+if (el.inspectorProfileButton) el.inspectorProfileButton.onclick = () => document.querySelector('#profileButton').click();
 
 (async function boot() {
   try {

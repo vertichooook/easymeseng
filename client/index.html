@@ -23,13 +23,28 @@
   </div>
 
   <div class="app-shell">
+    <nav class="nav-rail" aria-label="Nexus">
+      <span class="logo-mark">N</span>
+      <button class="rail-button active" type="button" data-rail-action="chats" title="Chats" aria-label="Chats">
+        <span class="rail-icon rail-chat"></span>
+      </button>
+      <button class="rail-button" type="button" data-rail-action="rooms" title="Rooms" aria-label="Rooms">
+        <span class="rail-icon rail-rooms"></span>
+      </button>
+      <button class="rail-button" type="button" data-rail-action="users" title="People" aria-label="People">
+        <span class="rail-icon rail-users"></span>
+      </button>
+      <button id="settingsButton" class="rail-button rail-bottom" type="button" title="Settings" aria-label="Settings">
+        <span class="rail-icon rail-settings"></span>
+      </button>
+    </nav>
+
     <aside id="sidebar" class="sidebar">
       <div class="brand">
         <div class="brand-lockup">
           <span class="logo-mark">N</span>
           <strong>Nexus</strong>
         </div>
-        <button id="settingsButton" class="icon-button ghost" type="button" title="Настройки">S</button>
         <button id="closeSidebar" class="icon-button ghost" type="button" title="Закрыть">×</button>
       </div>
       <section class="panel-section">
@@ -71,6 +86,23 @@
         <button id="sendButton" type="submit">Отправить</button>
       </form>
     </main>
+
+    <aside class="inspector-panel" id="inspectorPanel">
+      <div class="inspector-card">
+        <div id="inspectorAvatar" class="inspector-avatar"></div>
+        <strong id="inspectorTitle">Nexus</strong>
+        <span id="inspectorMeta">Workspace</span>
+      </div>
+      <div class="inspector-actions">
+        <button id="inspectorSettingsButton" type="button">Chat settings</button>
+        <button id="inspectorNewRoomButton" type="button">New room</button>
+        <button id="inspectorProfileButton" type="button">My profile</button>
+      </div>
+      <div class="inspector-note">
+        <span>Concept 3</span>
+        <p>Rooms, direct chats and tools now live around a focused workspace instead of a classic flat messenger layout.</p>
+      </div>
+    </aside>
   </div>
 
   <div id="contextMenu" class="context-menu" hidden>
