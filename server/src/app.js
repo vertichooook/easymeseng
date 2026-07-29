@@ -66,7 +66,7 @@ app.set('io', io);
 registerSocket(io);
 
 server.listen(config.port, config.host, () => {
-  console.log(`Messenger server listening on http://${config.host}:${config.port}`);
+  console.log(`Nexus server listening on http://${config.host}:${config.port}`);
 });
 
 process.on('uncaughtException', (error) => {

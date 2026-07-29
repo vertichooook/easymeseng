@@ -1,5 +1,5 @@
 [Unit]
-Description=Messenger Node.js backend
+Description=Nexus Node.js backend
 After=network.target
 
 [Service]

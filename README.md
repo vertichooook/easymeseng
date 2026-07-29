@@ -1,6 +1,6 @@
-# Messenger MVP
+# Nexus MVP
 
-Простой веб-мессенджер для одной Linux VDS: статический frontend, Express API, Socket.IO, SQLite, Nginx и Docker Compose. Интерфейс работает без сборщика.
+Nexus — простой веб-мессенджер для одной Linux VDS: статический frontend, Express API, Socket.IO, SQLite, Nginx и Docker Compose. Интерфейс работает без сборщика.
 
 ## Стек
 

@@ -1,14 +1,16 @@
 :root {
-  --bg: #f4f7f6;
+  --bg: #eef3f7;
   --panel: #ffffff;
-  --text: #15211f;
-  --muted: #687a77;
-  --line: #dce5e2;
-  --accent: #147d72;
-  --accent-dark: #0f5f57;
-  --danger: #b83232;
-  --mine: #dff3ef;
-  --soft: #edf5f3;
+  --text: #17202a;
+  --muted: #6c7a89;
+  --line: #dce5ec;
+  --accent: #0f8f82;
+  --accent-dark: #0b6c63;
+  --accent-2: #3658d4;
+  --danger: #c43d4b;
+  --mine: #dff4ef;
+  --soft: #eef6f8;
+  --shadow: 0 18px 50px rgb(25 45 70 / 0.12);
 }
 
 * { box-sizing: border-box; }
@@ -20,16 +22,18 @@ body {
   transition: background-color 0.18s ease, color 0.18s ease;
 }
 body.dark {
-  --bg: #111716;
-  --panel: #18211f;
-  --text: #eef7f4;
-  --muted: #9fb0ad;
-  --line: #2b3835;
-  --accent: #28a99a;
-  --accent-dark: #1d8075;
+  --bg: #0d1118;
+  --panel: #151c26;
+  --text: #eef5fb;
+  --muted: #a5b2c0;
+  --line: #293545;
+  --accent: #31b9a9;
+  --accent-dark: #249789;
+  --accent-2: #7b8cff;
   --danger: #ff7777;
   --mine: #163c38;
-  --soft: #22302d;
+  --soft: #202b39;
+  --shadow: 0 18px 50px rgb(0 0 0 / 0.28);
 }
 button, input, textarea { font: inherit; }
 button {
@@ -529,4 +533,138 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   }
   #sendButton { grid-column: 1 / -1; }
   .chat-actions { gap: 5px; }
+}
+
+/* Nexus visual refresh */
+body {
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+button {
+  border-radius: 10px;
+}
+
+.app-shell {
+  background:
+    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--accent-2) 16%, transparent), transparent 30%),
+    radial-gradient(circle at 88% 14%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 28%),
+    var(--bg);
+}
+
+.sidebar,
+.chat-header,
+.composer {
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.brand-lockup,
+.auth-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-lockup strong,
+.auth-logo strong {
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
+.logo-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-grid;
+  place-items: center;
+  color: white;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.logo-mark.large {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  font-size: 28px;
+}
+
+.auth-logo {
+  margin-bottom: 22px;
+}
+
+.list-item {
+  min-height: 46px;
+  border-radius: 10px;
+}
+
+.list-item:hover,
+.list-item.active {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, var(--soft)), var(--soft));
+}
+
+.chat-title-button {
+  border-radius: 12px;
+  padding: 6px 8px;
+}
+
+.chat-title-button:hover {
+  background: var(--soft);
+}
+
+.messages {
+  padding: 22px;
+}
+
+.message {
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--panel) 96%, transparent);
+  box-shadow: 0 8px 28px rgb(20 35 52 / 0.06);
+}
+
+.message.mine {
+  background: linear-gradient(135deg, var(--mine), color-mix(in srgb, var(--mine) 70%, var(--panel)));
+}
+
+.message:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  box-shadow: 0 14px 34px rgb(20 35 52 / 0.10);
+}
+
+textarea,
+input {
+  border-radius: 12px;
+}
+
+.auth-page {
+  background:
+    radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--accent-2) 22%, transparent), transparent 32%),
+    radial-gradient(circle at 82% 20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 28%),
+    var(--bg);
+}
+
+.auth-card {
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+}
+
+dialog {
+  border-radius: 18px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.context-menu {
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.toast {
+  border-radius: 14px;
+  box-shadow: var(--shadow);
 }

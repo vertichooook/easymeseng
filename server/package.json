@@ -1,7 +1,7 @@
 {
-  "name": "messenger-server",
+  "name": "nexus-server",
   "version": "1.0.0",
-  "description": "MVP web messenger backend with Express, Socket.IO and SQLite",
+  "description": "Nexus MVP backend with Express, Socket.IO and SQLite",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js"
