@@ -108,6 +108,12 @@ function initDb() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS app_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     INSERT OR IGNORE INTO rooms (id, name, created_by) VALUES (1, 'general', NULL);
   `);
 
@@ -135,7 +141,20 @@ function initDb() {
   migrateColumn('private_messages', 'forwarded_from_author', 'TEXT');
   migrateColumn('private_messages', 'forwarded_from_body', 'TEXT');
   migrateColumn('room_members', 'role', "TEXT NOT NULL DEFAULT 'member'");
-  db.prepare("INSERT OR IGNORE INTO room_members (room_id, user_id, role) SELECT 1, id, 'member' FROM users").run();
+
+  const generalMigration = db.prepare("SELECT value FROM app_meta WHERE key = 'general_membership_initialized'").get();
+  if (!generalMigration) {
+    db.prepare("INSERT OR IGNORE INTO room_members (room_id, user_id, role) SELECT 1, id, 'admin' FROM users").run();
+    db.prepare("UPDATE room_members SET role = 'admin' WHERE room_id = 1").run();
+    db.prepare("INSERT INTO app_meta (key, value) VALUES ('general_membership_initialized', '1')").run();
+  }
+
+  db.prepare(`
+    INSERT OR IGNORE INTO room_members (room_id, user_id, role)
+    SELECT id, created_by, 'admin'
+    FROM rooms
+    WHERE created_by IS NOT NULL
+  `).run();
 }
 
 function migrateColumn(table, column, type) {

@@ -47,6 +47,9 @@ const el = {
   roomMembers: document.querySelector('#roomMembers'),
   roomAvatarPreview: document.querySelector('#roomAvatarPreview'),
   roomAvatarInput: document.querySelector('#roomAvatarInput'),
+  inviteSearch: document.querySelector('#inviteSearch'),
+  userSearchInput: document.querySelector('#userSearchInput'),
+  userSearchResults: document.querySelector('#userSearchResults'),
   typing: document.querySelector('#typing'),
   toast: document.querySelector('#toast'),
   toastText: document.querySelector('#toastText'),
@@ -162,6 +165,30 @@ function addMessage(message, type) {
   el.messages.scrollTop = el.messages.scrollHeight;
 }
 
+function ensurePrivateUser(message) {
+  const other = message.sender_id === state.me.id
+    ? {
+      id: message.receiver_id,
+      username: message.receiver_username,
+      display_name: message.receiver_display_name,
+      avatar_url: message.receiver_avatar_url,
+      muted: 0
+    }
+    : {
+      id: message.sender_id,
+      username: message.sender_username,
+      display_name: message.sender_display_name,
+      avatar_url: message.sender_avatar_url,
+      muted: 0
+    };
+  if (other.id && !state.users.some((user) => user.id === other.id)) {
+    state.users.push(other);
+    state.users.sort((a, b) => a.username.localeCompare(b.username));
+    renderLists();
+  }
+  return other;
+}
+
 function removeMessage(messageId, type) {
   document.querySelector(`[data-message-type="${type}"][data-message-id="${messageId}"]`)?.remove();
 }
@@ -201,8 +228,20 @@ function setHeader() {
   el.chatAvatar = document.querySelector('#chatAvatar');
 }
 
+function showEmptyChat() {
+  state.chat = { type: 'empty', id: null, title: '' };
+  state.replyTo = null;
+  updateReplyBar();
+  renderTyping();
+  el.title.textContent = 'Чатов пока нет';
+  el.chatAvatar.outerHTML = '<span id="chatAvatar" class="avatar small">N</span>';
+  el.chatAvatar = document.querySelector('#chatAvatar');
+  el.messages.innerHTML = '<div class="empty-chat"><strong>Здесь пока пусто</strong><span>Создайте комнату или дождитесь приглашения.</span></div>';
+  renderLists();
+}
+
 async function openRoom(room) {
-  if (!room) return;
+  if (!room) return showEmptyChat();
   if (state.chat.type === 'room' && state.socket) state.socket.emit('room:leave', { roomId: state.chat.id });
   state.chat = { type: 'room', id: room.id, title: room.name };
   renderTyping();
@@ -245,6 +284,7 @@ async function uploadFile(file) {
 }
 
 function sendMessage(body, attachment = null) {
+  if (state.chat.type === 'empty') return toast('Сначала выберите или создайте чат.');
   const eventName = state.chat.type === 'room' ? 'message:send' : 'private:send';
   const payload = state.chat.type === 'room'
     ? { roomId: state.chat.id, body, attachment, replyTo: state.replyTo }
@@ -270,6 +310,24 @@ function bumpUnread(type, id, mentioned = false) {
 function showDeviceNotification(title, body, muted = false) {
   if (muted || !('Notification' in window) || Notification.permission !== 'granted' || document.hasFocus()) return;
   new Notification(title, { body });
+}
+
+async function resolveForwardTargets(input) {
+  const targets = [];
+  for (const raw of String(input || '').split(',').map((item) => item.trim()).filter(Boolean)) {
+    if (raw.startsWith('@')) {
+      const username = raw.slice(1).toLowerCase();
+      let user = state.users.find((candidate) => candidate.username === username);
+      if (!user) user = (await searchUsers(username)).find((candidate) => candidate.username === username);
+      if (user) targets.push({ type: 'private', id: user.id });
+    }
+    if (raw.startsWith('#')) {
+      const name = raw.slice(1).toLowerCase();
+      const room = state.rooms.find((candidate) => candidate.name.toLowerCase() === name);
+      if (room) targets.push({ type: 'room', id: room.id });
+    }
+  }
+  return targets;
 }
 
 function setupSocket() {
@@ -306,12 +364,6 @@ function setupSocket() {
     if (state.chat.type === 'private' && state.chat.id === user.id) setHeader();
     renderLists();
   });
-  state.socket.on('user:created', (user) => {
-    if (user.id !== state.me.id && !state.users.some((item) => item.id === user.id)) {
-      state.users.push(user);
-      renderLists();
-    }
-  });
   state.socket.on('message:new', (message) => {
     const mentioned = message.body?.toLowerCase().includes(`@${state.me.username}`);
     if (state.chat.type === 'room' && state.chat.id === message.room_id) addMessage(message, 'room');
@@ -322,12 +374,12 @@ function setupSocket() {
     }
   });
   state.socket.on('private:new', (message) => {
+    const other = ensurePrivateUser(message);
     const otherId = message.sender_id === state.me.id ? message.receiver_id : message.sender_id;
     if (state.chat.type === 'private' && state.chat.id === otherId) addMessage(message, 'private');
     if (message.sender_id !== state.me.id) {
-      const user = state.users.find((item) => item.id === otherId);
       bumpUnread('private', otherId, message.body?.toLowerCase().includes(`@${state.me.username}`));
-      showDeviceNotification(`Сообщение от ${message.sender_display_name || message.sender_username}`, message.body || message.attachment_name || 'Медиа', user?.muted);
+      showDeviceNotification(`Сообщение от ${message.sender_display_name || message.sender_username}`, message.body || message.attachment_name || 'Медиа', other?.muted);
     }
   });
   state.socket.on('notification:new', (event) => {
@@ -374,11 +426,7 @@ document.addEventListener('click', async (event) => {
     }
     if (menuAction === 'forward') {
       const target = prompt('Куда переслать? Например: @username или #room');
-      const targets = (target || '').split(',').map((item) => item.trim()).map((item) => {
-        if (item.startsWith('@')) return state.users.find((user) => user.username === item.slice(1).toLowerCase()) && { type: 'private', id: state.users.find((user) => user.username === item.slice(1).toLowerCase()).id };
-        if (item.startsWith('#')) return state.rooms.find((room) => room.name.toLowerCase() === item.slice(1).toLowerCase()) && { type: 'room', id: state.rooms.find((room) => room.name.toLowerCase() === item.slice(1).toLowerCase()).id };
-        return null;
-      }).filter(Boolean);
+      const targets = await resolveForwardTargets(target);
       if (!targets.length) return toast('Получатель не найден.');
       state.socket.emit('message:forward', { chatType: msg.type, messageId: msg.id, targets }, (ack) => toast(ack?.error || 'Сообщение переслано.'));
     }
@@ -459,7 +507,9 @@ function updateRecordButton() {
 }
 
 function canRecordVideoMessage() {
-  return window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 760;
+  const mobileUa = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const touchDevice = navigator.maxTouchPoints > 0;
+  return mobileUa || (touchDevice && window.matchMedia('(pointer: coarse)').matches) || window.innerWidth <= 760;
 }
 
 async function startRecording(kind) {
@@ -596,6 +646,7 @@ window.addEventListener('resize', updateRecordButton);
 let typingSent = false;
 let typingTimeout;
 el.input.addEventListener('input', () => {
+  if (!state.socket || state.chat.type === 'empty') return;
   if (!typingSent) {
     typingSent = true;
     state.socket.emit('typing:start', { chatType: state.chat.type, chatId: state.chat.id });
@@ -626,12 +677,41 @@ document.querySelector('#copyUsernameButton').onclick = async () => {
   toast('Username скопирован.');
 };
 
+async function searchUsers(query) {
+  const value = String(query || '').trim().replace(/^@/, '');
+  if (value.length < 2) return [];
+  return (await api(`/api/users/search?q=${encodeURIComponent(value)}`)).users;
+}
+
+async function inviteUserToCurrentRoom(userId) {
+  await api(`/api/rooms/${state.chat.id}/invite`, { method: 'POST', body: JSON.stringify({ userId }) });
+  toast('Пользователь приглашён.');
+  el.userSearchInput.value = '';
+  el.userSearchResults.innerHTML = '';
+}
+
+function renderUserSearchResults(users) {
+  el.userSearchResults.innerHTML = users.length
+    ? users.map((user) => `
+      <button class="search-result" type="button" data-invite-user="${user.id}">
+        ${avatar(user, 'small')}
+        <span>${escapeHtml(displayName(user))}</span>
+        <small>@${escapeHtml(user.username)}</small>
+      </button>
+    `).join('')
+    : '<p class="muted-text">Ничего не найдено.</p>';
+}
+
 el.chatHeaderButton.onclick = async () => {
   const item = currentItem();
   if (!item) return;
   document.querySelector('#roomSettingsModal h2').textContent = state.chat.type === 'room' ? `# ${item.name}` : displayName(item);
   el.roomAvatarPreview.innerHTML = avatar(item, 'large');
-  document.querySelector('#inviteButton').hidden = state.chat.type !== 'room' || state.chat.id === 1 || item.role !== 'admin';
+  const canInvite = state.chat.type === 'room' && item.role === 'admin';
+  document.querySelector('#inviteButton').hidden = !canInvite;
+  el.inviteSearch.hidden = !canInvite;
+  el.userSearchInput.value = '';
+  el.userSearchResults.innerHTML = '';
   document.querySelector('#deleteRoomButton').hidden = state.chat.type !== 'room' || state.chat.id === 1 || item.role !== 'admin';
   el.roomAvatarInput.hidden = state.chat.type !== 'room' || item.role !== 'admin';
   const muted = currentChatMuted();
@@ -657,11 +737,34 @@ document.querySelector('#muteButton').onclick = async () => {
 document.querySelector('#inviteButton').onclick = async () => {
   const username = prompt('Кого пригласить? Введите username без @');
   if (!username) return;
-  const user = state.users.find((candidate) => candidate.username === username.trim().toLowerCase());
+  const found = await searchUsers(username);
+  const clean = username.trim().replace(/^@/, '').toLowerCase();
+  const user = found.find((candidate) => candidate.username === clean) || found[0];
   if (!user) return toast('Пользователь не найден.');
-  await api(`/api/rooms/${state.chat.id}/invite`, { method: 'POST', body: JSON.stringify({ userId: user.id }) });
-  toast('Пользователь приглашён.');
+  await inviteUserToCurrentRoom(user.id);
 };
+let userSearchTimer = null;
+el.userSearchInput.addEventListener('input', () => {
+  clearTimeout(userSearchTimer);
+  userSearchTimer = setTimeout(async () => {
+    try {
+      renderUserSearchResults(await searchUsers(el.userSearchInput.value));
+    } catch (error) {
+      toast(error.message);
+    }
+  }, 250);
+});
+
+el.userSearchResults.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-invite-user]');
+  if (!button) return;
+  try {
+    await inviteUserToCurrentRoom(Number(button.dataset.inviteUser));
+  } catch (error) {
+    toast(error.message);
+  }
+});
+
 document.querySelector('#deleteRoomButton').onclick = async () => {
   if (!confirm('Удалить комнату для всех участников?')) return;
   await api(`/api/rooms/${state.chat.id}`, { method: 'DELETE' });

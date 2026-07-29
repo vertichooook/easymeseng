@@ -7,6 +7,34 @@ module.exports = {
   findUserByUsername: db.prepare('SELECT * FROM users WHERE username = ?'),
   findUserById: db.prepare(`SELECT ${userPublic} FROM users WHERE id = ?`),
   listUsers: db.prepare(`SELECT ${userPublic} FROM users ORDER BY username ASC`),
+  listVisibleUsersForUser: db.prepare(`
+    SELECT DISTINCT users.id, users.username, users.display_name, users.avatar_url, users.created_at,
+           muted_chats.muted_at IS NOT NULL AS muted
+    FROM users
+    LEFT JOIN muted_chats ON muted_chats.user_id = ? AND muted_chats.target_type = 'user' AND muted_chats.target_id = users.id
+    WHERE users.id != ?
+      AND (
+        users.id IN (
+          SELECT CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END
+          FROM private_messages
+          WHERE sender_id = ? OR receiver_id = ?
+        )
+        OR users.id IN (
+          SELECT other.user_id
+          FROM room_members mine
+          JOIN room_members other ON other.room_id = mine.room_id AND other.user_id != mine.user_id
+          WHERE mine.user_id = ?
+        )
+      )
+    ORDER BY users.username ASC
+  `),
+  searchUsersByUsername: db.prepare(`
+    SELECT ${userPublic}
+    FROM users
+    WHERE id != ? AND username LIKE ?
+    ORDER BY CASE WHEN username = ? THEN 0 ELSE 1 END, username ASC
+    LIMIT 12
+  `),
   updateUsername: db.prepare('UPDATE users SET username = ? WHERE id = ?'),
   updateDisplayName: db.prepare('UPDATE users SET display_name = ? WHERE id = ?'),
   updateAvatar: db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?'),
@@ -18,12 +46,11 @@ module.exports = {
 
   listRoomsForUser: db.prepare(`
     SELECT rooms.id, rooms.name, rooms.avatar_url, rooms.created_by, rooms.created_at,
-           COALESCE(room_members.role, CASE WHEN rooms.id = 1 THEN 'member' END) AS role,
+           room_members.role AS role,
            muted_chats.muted_at IS NOT NULL AS muted
     FROM rooms
-    LEFT JOIN room_members ON room_members.room_id = rooms.id AND room_members.user_id = ?
+    JOIN room_members ON room_members.room_id = rooms.id AND room_members.user_id = ?
     LEFT JOIN muted_chats ON muted_chats.user_id = ? AND muted_chats.target_type = 'room' AND muted_chats.target_id = rooms.id
-    WHERE rooms.id = 1 OR room_members.user_id IS NOT NULL
     ORDER BY rooms.id ASC
   `),
   createRoom: db.prepare('INSERT INTO rooms (name, created_by) VALUES (?, ?)'),

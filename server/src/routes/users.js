@@ -7,12 +7,14 @@ const router = express.Router();
 router.use(requireAuth);
 
 router.get('/', (req, res) => {
-  const mutedIds = new Set(q.listMutedChats.all(req.user.id)
-    .filter((item) => item.target_type === 'user')
-    .map((item) => item.target_id));
-  const users = q.listUsers.all()
-    .filter((user) => user.id !== req.user.id)
-    .map((user) => ({ ...user, muted: mutedIds.has(user.id) ? 1 : 0 }));
+  const users = q.listVisibleUsersForUser.all(req.user.id, req.user.id, req.user.id, req.user.id, req.user.id, req.user.id);
+  res.json({ users });
+});
+
+router.get('/search', (req, res) => {
+  const raw = String(req.query.q || '').trim().replace(/^@/, '').toLowerCase();
+  if (raw.length < 2) return res.json({ users: [] });
+  const users = q.searchUsersByUsername.all(req.user.id, `%${raw}%`, raw);
   res.json({ users });
 });
 

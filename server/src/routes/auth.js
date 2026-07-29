@@ -21,7 +21,6 @@ router.post('/register', authLimiter, async (req, res, next) => {
     const result = q.createUser.run(username.value, displayName.value, hash);
     createSession(res, result.lastInsertRowid);
     const user = q.findUserById.get(result.lastInsertRowid);
-    req.app.get('io')?.emit('user:created', user);
     return res.status(201).json({ user });
   } catch (error) {
     return next(error);

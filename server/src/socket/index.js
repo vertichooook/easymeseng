@@ -35,7 +35,7 @@ function normalizeBody(body, attachment) {
 }
 
 function canAccessRoom(roomId, userId) {
-  return Number(roomId) === 1 || q.findRoomMember.get(roomId, userId);
+  return Boolean(q.findRoomMember.get(roomId, userId));
 }
 
 function replyPreview(replyTo, chatType, userId) {

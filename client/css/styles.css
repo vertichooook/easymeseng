@@ -370,6 +370,37 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   max-height: 220px;
   overflow: auto;
 }
+.invite-search {
+  display: grid;
+  gap: 8px;
+}
+.invite-search[hidden] {
+  display: none !important;
+}
+.search-results {
+  display: grid;
+  gap: 6px;
+  max-height: 190px;
+  overflow: auto;
+}
+.search-result {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  text-align: left;
+}
+.search-result:hover {
+  background: var(--soft);
+  color: var(--text);
+}
+.search-result small {
+  color: var(--muted);
+}
 .member-row {
   display: flex;
   align-items: center;
@@ -482,6 +513,18 @@ dialog[open] { animation: modalIn 0.16s ease both; }
 .audio-media {
   max-height: 54px;
   background: transparent;
+}
+.empty-chat {
+  margin: auto;
+  display: grid;
+  gap: 6px;
+  place-items: center;
+  color: var(--muted);
+  text-align: center;
+}
+.empty-chat strong {
+  color: var(--text);
+  font-size: 18px;
 }
 .recording {
   background: var(--danger);

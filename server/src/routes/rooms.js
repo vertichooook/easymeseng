@@ -7,7 +7,7 @@ const router = express.Router();
 router.use(requireAuth);
 
 function canAccessRoom(roomId, userId) {
-  return Number(roomId) === 1 || q.findRoomMember.get(roomId, userId);
+  return Boolean(q.findRoomMember.get(roomId, userId));
 }
 
 function isRoomAdmin(room, userId) {
@@ -67,7 +67,7 @@ router.post('/:id/invite', (req, res) => {
   const roomId = Number(req.params.id);
   const userId = Number(req.body.userId);
   const room = q.findRoomById.get(roomId);
-  if (!room || room.id === 1) return res.status(404).json({ error: 'Комната не найдена.' });
+  if (!room) return res.status(404).json({ error: 'Комната не найдена.' });
   if (!isRoomAdmin(room, req.user.id)) return res.status(403).json({ error: 'Приглашать может только админ комнаты.' });
   const user = q.findUserById.get(userId);
   if (!user) return res.status(404).json({ error: 'Пользователь не найден.' });
