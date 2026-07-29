@@ -39,6 +39,7 @@ function initDb() {
     CREATE TABLE IF NOT EXISTS room_members (
       room_id INTEGER NOT NULL,
       user_id INTEGER NOT NULL,
+      role TEXT NOT NULL DEFAULT 'member',
       joined_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (room_id, user_id),
       FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
@@ -55,6 +56,11 @@ function initDb() {
       attachment_name TEXT,
       deleted_at TEXT,
       deleted_by INTEGER,
+      reply_to_message_id INTEGER,
+      reply_preview_author TEXT,
+      reply_preview_body TEXT,
+      forwarded_from_author TEXT,
+      forwarded_from_body TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -71,6 +77,11 @@ function initDb() {
       attachment_name TEXT,
       deleted_at TEXT,
       deleted_by INTEGER,
+      reply_to_message_id INTEGER,
+      reply_preview_author TEXT,
+      reply_preview_body TEXT,
+      forwarded_from_author TEXT,
+      forwarded_from_body TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -86,6 +97,15 @@ function initDb() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS muted_chats (
+      user_id INTEGER NOT NULL,
+      target_type TEXT NOT NULL CHECK (target_type IN ('room', 'user')),
+      target_id INTEGER NOT NULL,
+      muted_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, target_type, target_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
     INSERT OR IGNORE INTO rooms (id, name, created_by) VALUES (1, 'general', NULL);
   `);
 
@@ -95,11 +115,23 @@ function initDb() {
   migrateColumn('messages', 'attachment_name', 'TEXT');
   migrateColumn('messages', 'deleted_at', 'TEXT');
   migrateColumn('messages', 'deleted_by', 'INTEGER');
+  migrateColumn('messages', 'reply_to_message_id', 'INTEGER');
+  migrateColumn('messages', 'reply_preview_author', 'TEXT');
+  migrateColumn('messages', 'reply_preview_body', 'TEXT');
+  migrateColumn('messages', 'forwarded_from_author', 'TEXT');
+  migrateColumn('messages', 'forwarded_from_body', 'TEXT');
   migrateColumn('private_messages', 'attachment_url', 'TEXT');
   migrateColumn('private_messages', 'attachment_type', 'TEXT');
   migrateColumn('private_messages', 'attachment_name', 'TEXT');
   migrateColumn('private_messages', 'deleted_at', 'TEXT');
   migrateColumn('private_messages', 'deleted_by', 'INTEGER');
+  migrateColumn('private_messages', 'reply_to_message_id', 'INTEGER');
+  migrateColumn('private_messages', 'reply_preview_author', 'TEXT');
+  migrateColumn('private_messages', 'reply_preview_body', 'TEXT');
+  migrateColumn('private_messages', 'forwarded_from_author', 'TEXT');
+  migrateColumn('private_messages', 'forwarded_from_body', 'TEXT');
+  migrateColumn('room_members', 'role', "TEXT NOT NULL DEFAULT 'member'");
+  db.prepare("INSERT OR IGNORE INTO room_members (room_id, user_id, role) SELECT 1, id, 'member' FROM users").run();
 }
 
 function migrateColumn(table, column, type) {

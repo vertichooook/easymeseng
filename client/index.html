@@ -38,10 +38,17 @@
           <h1 id="chatTitle">Общий чат</h1>
           <span id="connectionStatus" class="status">подключение...</span>
         </div>
+        <div class="chat-actions">
+          <button id="notifyButton" class="icon-button ghost" type="button" title="Уведомления">!</button>
+          <button id="muteButton" class="icon-button ghost" type="button" title="Мут">M</button>
+          <button id="inviteButton" class="icon-button ghost" type="button" title="Пригласить">+</button>
+          <button id="deleteRoomButton" class="icon-button ghost danger-button" type="button" title="Удалить комнату">×</button>
+        </div>
       </header>
       <div id="messages" class="messages" aria-live="polite"></div>
       <div id="typing" class="typing"></div>
       <form id="messageForm" class="composer">
+        <div id="replyBar" class="reply-bar" hidden></div>
         <input id="fileInput" type="file" accept="image/*,video/*" hidden>
         <button id="attachButton" class="icon-button ghost" type="button" title="Картинка или видео">＋</button>
         <button id="voiceButton" class="icon-button ghost" type="button" title="Голосовое сообщение">●</button>

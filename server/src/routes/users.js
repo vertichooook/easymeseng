@@ -7,7 +7,12 @@ const router = express.Router();
 router.use(requireAuth);
 
 router.get('/', (req, res) => {
-  const users = q.listUsers.all().filter((user) => user.id !== req.user.id);
+  const mutedIds = new Set(q.listMutedChats.all(req.user.id)
+    .filter((item) => item.target_type === 'user')
+    .map((item) => item.target_id));
+  const users = q.listUsers.all()
+    .filter((user) => user.id !== req.user.id)
+    .map((user) => ({ ...user, muted: mutedIds.has(user.id) ? 1 : 0 }));
   res.json({ users });
 });
 
@@ -39,6 +44,18 @@ router.patch('/me', (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+router.post('/:id/mute', (req, res) => {
+  const userId = Number(req.params.id);
+  if (userId === req.user.id || !q.findUserById.get(userId)) return res.status(404).json({ error: 'Пользователь не найден.' });
+  q.muteChat.run(req.user.id, 'user', userId);
+  res.json({ ok: true, muted: true });
+});
+
+router.delete('/:id/mute', (req, res) => {
+  q.unmuteChat.run(req.user.id, 'user', Number(req.params.id));
+  res.json({ ok: true, muted: false });
 });
 
 module.exports = router;

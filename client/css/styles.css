@@ -46,6 +46,15 @@ button:hover { background: var(--accent-dark); }
   border: 1px solid var(--line);
 }
 .ghost:hover { background: var(--soft); color: var(--text); }
+.active-toggle {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.danger-button:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
 .icon-button {
   width: 36px;
   height: 36px;
@@ -124,6 +133,12 @@ button:hover { background: var(--accent-dark); }
   border-bottom: 1px solid var(--line);
   justify-content: flex-start;
 }
+.chat-header > div:first-of-type { min-width: 0; }
+.chat-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
 .chat-header h1 {
   margin: 0;
   font-size: 20px;
@@ -181,6 +196,19 @@ button:hover { background: var(--accent-dark); }
   color: var(--muted);
   font-style: italic;
 }
+.reply-preview {
+  margin-top: 6px;
+  padding-left: 8px;
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+  font-size: 13px;
+}
+mark {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 0 3px;
+}
 .typing {
   min-height: 24px;
   padding: 0 18px;
@@ -194,6 +222,24 @@ button:hover { background: var(--accent-dark); }
   padding: 14px;
   background: var(--panel);
   border-top: 1px solid var(--line);
+}
+.reply-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 34px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--soft);
+  color: var(--muted);
+}
+.reply-bar button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
 }
 textarea, input {
   width: 100%;
@@ -322,4 +368,5 @@ dialog::backdrop { background: rgb(0 0 0 / 0.35); }
     grid-template-columns: auto auto auto 1fr;
   }
   #sendButton { grid-column: 1 / -1; }
+  .chat-actions { gap: 5px; }
 }

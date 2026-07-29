@@ -6,8 +6,17 @@ const { validateRoomName } = require('../utils/validators');
 const router = express.Router();
 router.use(requireAuth);
 
-router.get('/', (_req, res) => {
-  res.json({ rooms: q.listRooms.all() });
+function canAccessRoom(roomId, userId) {
+  return Number(roomId) === 1 || q.findRoomMember.get(roomId, userId);
+}
+
+function isRoomAdmin(room, userId) {
+  const member = q.findRoomMember.get(room.id, userId);
+  return room.created_by === userId || member?.role === 'admin';
+}
+
+router.get('/', (req, res) => {
+  res.json({ rooms: q.listRoomsForUser.all(req.user.id, req.user.id) });
 });
 
 router.post('/', (req, res, next) => {
@@ -17,8 +26,9 @@ router.post('/', (req, res, next) => {
     if (q.findRoomByName.get(name.value)) return res.status(409).json({ error: 'Комната с таким названием уже есть.' });
     const result = q.createRoom.run(name.value, req.user.id);
     const room = q.findRoomById.get(result.lastInsertRowid);
-    req.app.get('io')?.emit('room:created', room);
-    res.status(201).json({ room });
+    q.addRoomAdmin.run(room.id, req.user.id);
+    req.app.get('io')?.to(`user:${req.user.id}`).emit('room:created', { ...room, role: 'admin', muted: 0 });
+    res.status(201).json({ room: { ...room, role: 'admin', muted: 0 } });
   } catch (error) {
     next(error);
   }
@@ -27,8 +37,44 @@ router.post('/', (req, res, next) => {
 router.get('/:id/messages', (req, res) => {
   const roomId = Number(req.params.id);
   if (!q.findRoomById.get(roomId)) return res.status(404).json({ error: 'Комната не найдена.' });
+  if (!canAccessRoom(roomId, req.user.id)) return res.status(403).json({ error: 'Нет доступа к комнате.' });
   const rows = q.listRoomMessages.all(roomId, req.user.id, 100).reverse();
   res.json({ messages: rows });
+});
+
+router.post('/:id/invite', (req, res) => {
+  const roomId = Number(req.params.id);
+  const userId = Number(req.body.userId);
+  const room = q.findRoomById.get(roomId);
+  if (!room || room.id === 1) return res.status(404).json({ error: 'Комната не найдена.' });
+  if (!isRoomAdmin(room, req.user.id)) return res.status(403).json({ error: 'Приглашать может только админ комнаты.' });
+  const user = q.findUserById.get(userId);
+  if (!user) return res.status(404).json({ error: 'Пользователь не найден.' });
+  q.addRoomMember.run(roomId, userId);
+  req.app.get('io')?.to(`user:${userId}`).emit('room:created', { ...room, role: 'member', muted: 0 });
+  res.json({ ok: true });
+});
+
+router.delete('/:id', (req, res) => {
+  const roomId = Number(req.params.id);
+  const room = q.findRoomById.get(roomId);
+  if (!room || room.id === 1) return res.status(404).json({ error: 'Комнату нельзя удалить.' });
+  if (!isRoomAdmin(room, req.user.id)) return res.status(403).json({ error: 'Удалить комнату может только админ.' });
+  q.deleteRoom.run(roomId);
+  req.app.get('io')?.emit('room:deleted', { roomId });
+  res.json({ ok: true });
+});
+
+router.post('/:id/mute', (req, res) => {
+  const roomId = Number(req.params.id);
+  if (!canAccessRoom(roomId, req.user.id)) return res.status(403).json({ error: 'Нет доступа к комнате.' });
+  q.muteChat.run(req.user.id, 'room', roomId);
+  res.json({ ok: true, muted: true });
+});
+
+router.delete('/:id/mute', (req, res) => {
+  q.unmuteChat.run(req.user.id, 'room', Number(req.params.id));
+  res.json({ ok: true, muted: false });
 });
 
 module.exports = router;
