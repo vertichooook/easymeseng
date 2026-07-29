@@ -14,6 +14,8 @@ const allowed = new Map([
   ['image/gif', 'gif'],
   ['video/mp4', 'mp4'],
   ['video/webm', 'webm'],
+  ['video/quicktime', 'mov'],
+  ['video/3gpp', '3gp'],
   ['audio/webm', 'webm'],
   ['audio/mp4', 'm4a'],
   ['audio/aac', 'aac'],

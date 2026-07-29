@@ -13,6 +13,9 @@ const state = {
   recordPressStarted: false,
   recordPointerId: null,
   recordHoldTimer: null,
+  recordStarting: false,
+  stopAfterStart: false,
+  recordingKind: null,
   typing: new Map(),
   recorder: null,
   chunks: [],
@@ -446,6 +449,7 @@ el.fileInput.addEventListener('change', async () => {
 });
 
 function updateRecordButton() {
+  if (state.recordStarting || state.recorder?.state === 'recording') return;
   if (!canRecordVideoMessage()) state.recordMode = 'audio';
   el.recordButton.classList.toggle('mic-icon', state.recordMode === 'audio');
   el.recordButton.classList.toggle('video-icon', state.recordMode === 'video');
@@ -459,42 +463,71 @@ function canRecordVideoMessage() {
 }
 
 async function startRecording(kind) {
-  if (state.recorder?.state === 'recording') return;
+  if (state.recordStarting || state.recorder?.state === 'recording') return;
+  state.recordStarting = true;
+  state.stopAfterStart = false;
+  state.recordingKind = kind;
   try {
     if (!window.isSecureContext) {
+      state.recordStarting = false;
       return toast('Для микрофона и камеры откройте сайт через HTTPS.');
     }
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      state.recordStarting = false;
       return toast('Этот браузер не поддерживает запись аудио или видео.');
     }
     toast(kind === 'video' ? 'Разрешите доступ к камере и микрофону.' : 'Разрешите доступ к микрофону.');
     const constraints = kind === 'video'
       ? { audio: true, video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } } }
       : { audio: { echoCancellation: true, noiseSuppression: true } };
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (error) {
+      if (kind !== 'video') throw error;
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+    }
     state.chunks = [];
     const audioTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'];
     const videoTypes = ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
     const mimeType = (kind === 'video' ? videoTypes : audioTypes).find((type) => MediaRecorder.isTypeSupported(type)) || '';
-    state.recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    const recorderOptions = {
+      ...(mimeType ? { mimeType } : {}),
+      ...(kind === 'video' ? { videoBitsPerSecond: 700000, audioBitsPerSecond: 64000 } : { audioBitsPerSecond: 64000 })
+    };
+    state.recorder = new MediaRecorder(stream, recorderOptions);
     state.recorder.ondataavailable = (event) => event.data.size && state.chunks.push(event.data);
     state.recorder.onstop = async () => {
       stream.getTracks().forEach((track) => track.stop());
       try {
         const type = state.recorder.mimeType || (kind === 'video' ? 'video/webm' : 'audio/webm');
         const ext = type.includes('mp4') || type.includes('aac') ? 'mp4' : 'webm';
+        if (!state.chunks.length) return toast('Запись получилась пустой. Попробуйте удерживать кнопку дольше.');
         const file = new File([new Blob(state.chunks, { type })], `${kind}-${Date.now()}.${ext}`, { type });
         sendMessage('', await uploadFile(file));
       } catch (error) {
         toast(error.message || 'Не удалось отправить запись.');
       } finally {
         el.recordButton.classList.remove('recording');
+        state.recorder = null;
+        state.recordStarting = false;
+        state.stopAfterStart = false;
+        state.recordingKind = null;
+        updateRecordButton();
       }
     };
     state.recorder.start();
+    state.recordStarting = false;
     el.recordButton.classList.add('recording');
     toast(kind === 'video' ? 'Идёт запись видео. Отпустите кнопку для отправки.' : 'Идёт запись голоса. Отпустите кнопку для отправки.');
+    if (state.stopAfterStart) {
+      setTimeout(stopRecording, 120);
+    }
   } catch (error) {
+    state.recordStarting = false;
+    state.stopAfterStart = false;
+    state.recordingKind = null;
+    el.recordButton.classList.remove('recording');
     if (error.name === 'NotAllowedError') return toast('Доступ запрещён. Разрешите микрофон/камеру в настройках сайта.');
     if (error.name === 'NotFoundError') return toast('Микрофон или камера не найдены.');
     if (error.name === 'NotReadableError') return toast('Устройство уже используется другим приложением.');
@@ -503,11 +536,21 @@ async function startRecording(kind) {
 }
 
 function stopRecording() {
+  if (state.recordStarting) {
+    state.stopAfterStart = true;
+    return;
+  }
   if (state.recorder?.state === 'recording') state.recorder.stop();
+}
+
+function resetRecordPress() {
+  state.recordPressStarted = false;
+  state.recordPointerId = null;
 }
 
 el.recordButton.addEventListener('pointerdown', (event) => {
   if (event.button !== undefined && event.button !== 0) return;
+  if (state.recordStarting || state.recorder?.state === 'recording') return;
   event.preventDefault();
   state.recordPressStarted = false;
   state.recordPointerId = event.pointerId;
@@ -524,24 +567,27 @@ el.recordButton.addEventListener('pointerup', (event) => {
   if (state.recordPressStarted) {
     stopRecording();
   } else {
+    if (state.recordStarting || state.recorder?.state === 'recording') {
+      resetRecordPress();
+      return;
+    }
     if (!canRecordVideoMessage()) {
       toast('На ПК доступна запись голоса. Удерживайте кнопку для записи.');
       updateRecordButton();
+      resetRecordPress();
       return;
     }
     state.recordMode = state.recordMode === 'audio' ? 'video' : 'audio';
     updateRecordButton();
     toast(state.recordMode === 'audio' ? 'Режим: голосовое сообщение.' : 'Режим: видеосообщение.');
   }
-  state.recordPressStarted = false;
-  state.recordPointerId = null;
+  resetRecordPress();
 });
 
 el.recordButton.addEventListener('pointercancel', () => {
   clearTimeout(state.recordHoldTimer);
   stopRecording();
-  state.recordPressStarted = false;
-  state.recordPointerId = null;
+  resetRecordPress();
 });
 el.recordButton.addEventListener('contextmenu', (event) => event.preventDefault());
 updateRecordButton();
