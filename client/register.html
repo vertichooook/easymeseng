@@ -9,9 +9,10 @@
 <body class="auth-page">
   <main class="auth-card">
     <h1>Регистрация</h1>
-    <p>Имя: латиница, цифры или подчёркивание.</p>
+    <p>Username: латиница, цифры или подчёркивание.</p>
     <form id="registerForm" class="auth-form">
-      <label>Имя пользователя<input name="username" autocomplete="username" required minlength="3" maxlength="32"></label>
+      <label>Имя<input name="display_name" autocomplete="name" required minlength="2" maxlength="48"></label>
+      <label>Username<input name="username" autocomplete="username" required minlength="3" maxlength="32"></label>
       <label>Пароль<input name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128"></label>
       <button type="submit">Зарегистрироваться</button>
       <div id="notice" class="notice" role="status"></div>

@@ -17,6 +17,7 @@ body {
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
   background: var(--bg);
+  transition: background-color 0.18s ease, color 0.18s ease;
 }
 body.dark {
   --bg: #111716;
@@ -38,8 +39,10 @@ button {
   border-radius: 6px;
   padding: 10px 14px;
   cursor: pointer;
+  transition: transform 0.14s ease, background-color 0.14s ease, color 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
 }
 button:hover { background: var(--accent-dark); }
+button:active { transform: translateY(1px) scale(0.98); }
 .ghost {
   background: transparent;
   color: var(--text);
@@ -73,6 +76,7 @@ button:hover { background: var(--accent-dark); }
   display: flex;
   flex-direction: column;
   min-width: 0;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 .brand, .section-title, .profile-mini, .chat-header {
   display: flex;
@@ -95,8 +99,11 @@ button:hover { background: var(--accent-dark); }
   background: transparent;
   text-align: left;
   min-height: 42px;
+  border-radius: 8px;
+  transition: background-color 0.14s ease, transform 0.14s ease;
 }
 .list-item:hover, .list-item.active { background: var(--soft); color: var(--text); }
+.list-item:hover { transform: translateX(2px); }
 .list-item small { margin-left: auto; color: var(--muted); }
 .dot, .list-item small i {
   width: 9px;
@@ -132,6 +139,7 @@ button:hover { background: var(--accent-dark); }
   background: var(--panel);
   border-bottom: 1px solid var(--line);
   justify-content: flex-start;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 .chat-header > div:first-of-type { min-width: 0; }
 .chat-actions {
@@ -143,6 +151,27 @@ button:hover { background: var(--accent-dark); }
   margin: 0;
   font-size: 20px;
 }
+.chat-title-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  min-width: 0;
+}
+.chat-title-button:hover { background: transparent; color: var(--text); }
+.chat-title-button span:last-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.chat-title-button strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .status { color: var(--muted); font-size: 13px; }
 .menu-button, #closeSidebar { display: none; }
 .messages {
@@ -151,6 +180,7 @@ button:hover { background: var(--accent-dark); }
   display: flex;
   flex-direction: column;
   gap: 10px;
+  scroll-behavior: smooth;
 }
 .message {
   max-width: min(720px, 90%);
@@ -161,10 +191,20 @@ button:hover { background: var(--accent-dark); }
   overflow-wrap: anywhere;
   display: flex;
   gap: 10px;
+  animation: messageIn 0.18s ease both;
+  transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease, background-color 0.18s ease;
+}
+.message:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.06);
 }
 .message.mine {
   align-self: flex-end;
   background: var(--mine);
+}
+.message.mentioned {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 .message-content { min-width: 0; }
 .message p { margin: 6px 0 0; white-space: pre-wrap; }
@@ -209,6 +249,24 @@ mark {
   border-radius: 4px;
   padding: 0 3px;
 }
+.context-menu {
+  position: fixed;
+  z-index: 30;
+  width: 160px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 14px 40px rgb(0 0 0 / 0.18);
+  animation: menuIn 0.12s ease both;
+}
+.context-menu button {
+  width: 100%;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+.context-menu button:hover { background: var(--soft); }
 .typing {
   min-height: 24px;
   padding: 0 18px;
@@ -222,6 +280,7 @@ mark {
   padding: 14px;
   background: var(--panel);
   border-top: 1px solid var(--line);
+  transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 .reply-bar {
   grid-column: 1 / -1;
@@ -251,7 +310,10 @@ textarea, input {
   color: var(--text);
   background: var(--panel);
 }
-textarea:focus, input:focus { border-color: var(--accent); }
+textarea:focus, input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
 .auth-page {
   min-height: 100vh;
   display: grid;
@@ -279,8 +341,40 @@ dialog {
   width: min(420px, calc(100% - 30px));
 }
 dialog::backdrop { background: rgb(0 0 0 / 0.35); }
+dialog[open] { animation: modalIn 0.16s ease both; }
 .modal-form { padding: 22px; display: grid; gap: 14px; }
 .modal-form label { display: grid; gap: 6px; color: var(--muted); }
+.muted-text { color: var(--muted); margin: 0; }
+.check-row {
+  display: flex !important;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 10px;
+}
+.check-row input { width: auto; }
+.danger-fill {
+  background: var(--danger);
+  color: white;
+}
+.danger-fill:hover { filter: brightness(0.92); }
+.members-list {
+  display: grid;
+  gap: 8px;
+  max-height: 220px;
+  overflow: auto;
+}
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.member-row small {
+  margin-left: auto;
+  color: var(--muted);
+}
 .modal-form menu {
   display: flex;
   justify-content: flex-end;
@@ -328,6 +422,25 @@ dialog::backdrop { background: rgb(0 0 0 / 0.35); }
   display: flex;
   justify-content: center;
 }
+.unread-count, .unread-dot {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  display: inline-grid;
+  place-items: center;
+  font-size: 12px;
+  padding: 0 6px;
+}
+.unread-dot {
+  min-width: 10px;
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  background: var(--danger);
+}
 .media {
   display: block;
   max-width: min(520px, 100%);
@@ -349,6 +462,35 @@ dialog::backdrop { background: rgb(0 0 0 / 0.35); }
   background: var(--danger);
   color: white;
   border-color: var(--danger);
+  animation: pulse 1.1s ease infinite;
+}
+
+@keyframes messageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes menuIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 35%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--danger) 0%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @media (max-width: 760px) {

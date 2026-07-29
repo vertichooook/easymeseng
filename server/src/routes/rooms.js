@@ -42,6 +42,27 @@ router.get('/:id/messages', (req, res) => {
   res.json({ messages: rows });
 });
 
+router.get('/:id/members', (req, res) => {
+  const roomId = Number(req.params.id);
+  if (!canAccessRoom(roomId, req.user.id)) return res.status(403).json({ error: 'Нет доступа к комнате.' });
+  res.json({ members: q.listRoomMembers.all(roomId) });
+});
+
+router.patch('/:id', (req, res) => {
+  const roomId = Number(req.params.id);
+  const room = q.findRoomById.get(roomId);
+  if (!room) return res.status(404).json({ error: 'Комната не найдена.' });
+  if (!isRoomAdmin(room, req.user.id)) return res.status(403).json({ error: 'Изменять комнату может только админ.' });
+  if (req.body.avatar_url !== undefined) {
+    const avatar = String(req.body.avatar_url || '').trim();
+    if (avatar && !/^\/uploads\/[a-zA-Z0-9.-]+$/.test(avatar)) return res.status(400).json({ error: 'Некорректная ссылка на аватар.' });
+    q.updateRoomAvatar.run(avatar || null, roomId);
+  }
+  const updated = q.findRoomById.get(roomId);
+  req.app.get('io')?.to(`room:${roomId}`).emit('room:updated', updated);
+  res.json({ room: updated });
+});
+
 router.post('/:id/invite', (req, res) => {
   const roomId = Number(req.params.id);
   const userId = Number(req.body.userId);
@@ -51,6 +72,11 @@ router.post('/:id/invite', (req, res) => {
   const user = q.findUserById.get(userId);
   if (!user) return res.status(404).json({ error: 'Пользователь не найден.' });
   q.addRoomMember.run(roomId, userId);
+  const inviter = q.findUserById.get(req.user.id);
+  const body = `${inviter.display_name || inviter.username} пригласил вас в комнату #${room.name}`;
+  const result = q.insertPrivateMessage.run(req.user.id, userId, `[Система] ${body}`, null, null, null, null, null, null, null, null);
+  const saved = q.findPrivateMessageById.get(result.lastInsertRowid);
+  req.app.get('io')?.to(`user:${req.user.id}`).to(`user:${userId}`).emit('private:new', saved);
   req.app.get('io')?.to(`user:${userId}`).emit('room:created', { ...room, role: 'member', muted: 0 });
   res.json({ ok: true });
 });

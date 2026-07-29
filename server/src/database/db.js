@@ -15,6 +15,7 @@ function initDb() {
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      display_name TEXT,
       password_hash TEXT NOT NULL,
       avatar_url TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -31,6 +32,7 @@ function initDb() {
     CREATE TABLE IF NOT EXISTS rooms (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      avatar_url TEXT,
       created_by INTEGER,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
@@ -110,6 +112,8 @@ function initDb() {
   `);
 
   migrateColumn('users', 'avatar_url', 'TEXT');
+  migrateColumn('users', 'display_name', 'TEXT');
+  migrateColumn('rooms', 'avatar_url', 'TEXT');
   migrateColumn('messages', 'attachment_url', 'TEXT');
   migrateColumn('messages', 'attachment_type', 'TEXT');
   migrateColumn('messages', 'attachment_name', 'TEXT');

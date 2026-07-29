@@ -22,10 +22,7 @@ const allowed = new Map([
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, config.uploadDir),
-  filename: (_req, file, cb) => {
-    const ext = allowed.get(file.mimetype);
-    cb(null, `${Date.now()}-${crypto.randomBytes(10).toString('hex')}.${ext}`);
-  }
+  filename: (_req, file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(10).toString('hex')}.${allowed.get(file.mimetype)}`)
 });
 
 const upload = multer({
@@ -44,14 +41,17 @@ function mediaType(mimetype) {
   return 'file';
 }
 
-router.post('/', requireAuth, upload.single('file'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Файл не загружен.' });
-  res.status(201).json({
-    attachment: {
-      url: `/uploads/${path.basename(req.file.filename)}`,
-      type: mediaType(req.file.mimetype),
-      name: req.file.originalname.slice(0, 120)
-    }
+router.post('/', requireAuth, (req, res) => {
+  upload.single('file')(req, res, (error) => {
+    if (error) return res.status(400).json({ error: error.message });
+    if (!req.file) return res.status(400).json({ error: 'Файл не загружен.' });
+    return res.status(201).json({
+      attachment: {
+        url: `/uploads/${path.basename(req.file.filename)}`,
+        type: mediaType(req.file.mimetype),
+        name: req.file.originalname.slice(0, 120)
+      }
+    });
   });
 });
 

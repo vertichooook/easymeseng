@@ -40,7 +40,7 @@ function getUserFromRequest(req) {
     if (row) q.deleteSession.run(id);
     return null;
   }
-  return { id: row.id, username: row.username, avatar_url: row.avatar_url, created_at: row.created_at };
+  return { id: row.id, username: row.username, display_name: row.display_name, avatar_url: row.avatar_url, created_at: row.created_at };
 }
 
 function attachUser(req, _res, next) {

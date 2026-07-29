@@ -30,6 +30,14 @@ function validateRoomName(name) {
   return { ok: true, value };
 }
 
+function validateDisplayName(name) {
+  const value = String(name || '').trim().replace(/\s+/g, ' ');
+  if (value.length < 2 || value.length > 48) {
+    return { ok: false, message: 'Имя должно быть от 2 до 48 символов.' };
+  }
+  return { ok: true, value };
+}
+
 function validateMessage(body) {
   const value = String(body || '').trim();
   if (!value) return { ok: false, message: 'Сообщение не может быть пустым.' };
@@ -39,4 +47,4 @@ function validateMessage(body) {
   return { ok: true, value };
 }
 
-module.exports = { normalizeUsername, validateUsername, validatePassword, validateRoomName, validateMessage };
+module.exports = { normalizeUsername, validateUsername, validatePassword, validateRoomName, validateMessage, validateDisplayName };

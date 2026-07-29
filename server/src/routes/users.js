@@ -1,7 +1,7 @@
 const express = require('express');
 const q = require('../database/queries');
 const { requireAuth } = require('../middleware/auth');
-const { validateUsername } = require('../utils/validators');
+const { validateUsername, validateDisplayName } = require('../utils/validators');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -27,6 +27,13 @@ router.patch('/me', (req, res, next) => {
       if (existing && existing.id !== req.user.id) return res.status(409).json({ error: 'Такое имя уже занято.' });
       q.updateUsername.run(username.value, req.user.id);
       updates.username = username.value;
+    }
+
+    if (req.body.display_name !== undefined) {
+      const displayName = validateDisplayName(req.body.display_name);
+      if (!displayName.ok) return res.status(400).json({ error: displayName.message });
+      q.updateDisplayName.run(displayName.value, req.user.id);
+      updates.display_name = displayName.value;
     }
 
     if (req.body.avatar_url !== undefined) {

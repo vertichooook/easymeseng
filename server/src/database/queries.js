@@ -1,22 +1,23 @@
 const { db } = require('./db');
 
-const userPublic = 'id, username, avatar_url, created_at';
+const userPublic = 'id, username, display_name, avatar_url, created_at';
 
 module.exports = {
-  createUser: db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)'),
+  createUser: db.prepare('INSERT INTO users (username, display_name, password_hash) VALUES (?, ?, ?)'),
   findUserByUsername: db.prepare('SELECT * FROM users WHERE username = ?'),
   findUserById: db.prepare(`SELECT ${userPublic} FROM users WHERE id = ?`),
   listUsers: db.prepare(`SELECT ${userPublic} FROM users ORDER BY username ASC`),
   updateUsername: db.prepare('UPDATE users SET username = ? WHERE id = ?'),
+  updateDisplayName: db.prepare('UPDATE users SET display_name = ? WHERE id = ?'),
   updateAvatar: db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?'),
 
   createSession: db.prepare('INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)'),
-  findSession: db.prepare('SELECT sessions.id AS session_id, sessions.expires_at, users.id, users.username, users.avatar_url, users.created_at FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.id = ?'),
+  findSession: db.prepare('SELECT sessions.id AS session_id, sessions.expires_at, users.id, users.username, users.display_name, users.avatar_url, users.created_at FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.id = ?'),
   deleteSession: db.prepare('DELETE FROM sessions WHERE id = ?'),
   deleteExpiredSessions: db.prepare("DELETE FROM sessions WHERE expires_at <= datetime('now')"),
 
   listRoomsForUser: db.prepare(`
-    SELECT rooms.id, rooms.name, rooms.created_by, rooms.created_at,
+    SELECT rooms.id, rooms.name, rooms.avatar_url, rooms.created_by, rooms.created_at,
            COALESCE(room_members.role, CASE WHEN rooms.id = 1 THEN 'member' END) AS role,
            muted_chats.muted_at IS NOT NULL AS muted
     FROM rooms
@@ -26,14 +27,15 @@ module.exports = {
     ORDER BY rooms.id ASC
   `),
   createRoom: db.prepare('INSERT INTO rooms (name, created_by) VALUES (?, ?)'),
-  findRoomById: db.prepare('SELECT id, name, created_by, created_at FROM rooms WHERE id = ?'),
+  findRoomById: db.prepare('SELECT id, name, avatar_url, created_by, created_at FROM rooms WHERE id = ?'),
+  updateRoomAvatar: db.prepare('UPDATE rooms SET avatar_url = ? WHERE id = ?'),
   findRoomByName: db.prepare('SELECT id FROM rooms WHERE name = ?'),
   deleteRoom: db.prepare('DELETE FROM rooms WHERE id = ?'),
 
   addRoomMember: db.prepare("INSERT OR IGNORE INTO room_members (room_id, user_id, role) VALUES (?, ?, 'member')"),
   addRoomAdmin: db.prepare("INSERT OR REPLACE INTO room_members (room_id, user_id, role) VALUES (?, ?, 'admin')"),
   findRoomMember: db.prepare('SELECT room_id, user_id, role FROM room_members WHERE room_id = ? AND user_id = ?'),
-  listRoomMembers: db.prepare('SELECT users.id, users.username, users.avatar_url FROM room_members JOIN users ON users.id = room_members.user_id WHERE room_members.room_id = ?'),
+  listRoomMembers: db.prepare('SELECT users.id, users.username, users.display_name, users.avatar_url FROM room_members JOIN users ON users.id = room_members.user_id WHERE room_members.room_id = ?'),
   insertMessage: db.prepare(`
     INSERT INTO messages (
       room_id, user_id, body, attachment_url, attachment_type, attachment_name,
@@ -45,9 +47,10 @@ module.exports = {
            messages.attachment_name, messages.deleted_at, messages.deleted_by,
            messages.reply_to_message_id, messages.reply_preview_author, messages.reply_preview_body,
            messages.forwarded_from_author, messages.forwarded_from_body, messages.created_at,
-           users.id AS user_id, users.username, users.avatar_url
+           users.id AS user_id, users.username, users.display_name, users.avatar_url
     FROM messages JOIN users ON users.id = messages.user_id
     WHERE messages.room_id = ?
+      AND messages.deleted_at IS NULL
       AND NOT EXISTS (
         SELECT 1 FROM hidden_messages hm
         WHERE hm.user_id = ? AND hm.message_type = 'room' AND hm.message_id = messages.id
@@ -60,7 +63,7 @@ module.exports = {
            messages.attachment_name, messages.deleted_at, messages.deleted_by,
            messages.reply_to_message_id, messages.reply_preview_author, messages.reply_preview_body,
            messages.forwarded_from_author, messages.forwarded_from_body, messages.created_at,
-           users.id AS user_id, users.username, users.avatar_url
+           users.id AS user_id, users.username, users.display_name, users.avatar_url
     FROM messages JOIN users ON users.id = messages.user_id
     WHERE messages.id = ?
   `),
@@ -73,8 +76,8 @@ module.exports = {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `),
   listPrivateMessages: db.prepare(`
-    SELECT pm.id, pm.sender_id, sender.username AS sender_username, pm.receiver_id,
-           receiver.username AS receiver_username, sender.avatar_url AS sender_avatar_url,
+    SELECT pm.id, pm.sender_id, sender.username AS sender_username, sender.display_name AS sender_display_name, pm.receiver_id,
+           receiver.username AS receiver_username, receiver.display_name AS receiver_display_name, sender.avatar_url AS sender_avatar_url,
            receiver.avatar_url AS receiver_avatar_url, pm.body, pm.attachment_url,
            pm.attachment_type, pm.attachment_name, pm.deleted_at, pm.deleted_by,
            pm.reply_to_message_id, pm.reply_preview_author, pm.reply_preview_body,
@@ -83,6 +86,7 @@ module.exports = {
     JOIN users sender ON sender.id = pm.sender_id
     JOIN users receiver ON receiver.id = pm.receiver_id
     WHERE ((pm.sender_id = ? AND pm.receiver_id = ?) OR (pm.sender_id = ? AND pm.receiver_id = ?))
+      AND pm.deleted_at IS NULL
       AND NOT EXISTS (
         SELECT 1 FROM hidden_messages hm
         WHERE hm.user_id = ? AND hm.message_type = 'private' AND hm.message_id = pm.id
@@ -91,8 +95,8 @@ module.exports = {
     LIMIT ?
   `),
   findPrivateMessageById: db.prepare(`
-    SELECT pm.id, pm.sender_id, sender.username AS sender_username, pm.receiver_id,
-           receiver.username AS receiver_username, sender.avatar_url AS sender_avatar_url,
+    SELECT pm.id, pm.sender_id, sender.username AS sender_username, sender.display_name AS sender_display_name, pm.receiver_id,
+           receiver.username AS receiver_username, receiver.display_name AS receiver_display_name, sender.avatar_url AS sender_avatar_url,
            receiver.avatar_url AS receiver_avatar_url, pm.body, pm.attachment_url,
            pm.attachment_type, pm.attachment_name, pm.deleted_at, pm.deleted_by,
            pm.reply_to_message_id, pm.reply_preview_author, pm.reply_preview_body,

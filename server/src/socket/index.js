@@ -7,7 +7,7 @@ const { COOKIE_NAME } = require('../middleware/auth');
 const online = new Map();
 const typingTimers = new Map();
 
-const publicUser = (user) => ({ id: user.id, username: user.username, avatar_url: user.avatar_url || null });
+const publicUser = (user) => ({ id: user.id, username: user.username, display_name: user.display_name, avatar_url: user.avatar_url || null });
 const onlinePayload = () => Array.from(online.values()).map((entry) => publicUser(entry.user));
 
 function parseSignedCookie(socket) {
@@ -77,7 +77,7 @@ function socketAuth(socket, next) {
     if (!sessionId) return next(new Error('Требуется вход в аккаунт.'));
     const row = q.findSession.get(sessionId);
     if (!row || new Date(`${row.expires_at}Z`).getTime() <= Date.now()) return next(new Error('Сессия истекла.'));
-    socket.user = { id: row.id, username: row.username, avatar_url: row.avatar_url };
+    socket.user = { id: row.id, username: row.username, display_name: row.display_name, avatar_url: row.avatar_url };
     return next();
   } catch (error) {
     return next(error);
@@ -178,7 +178,7 @@ function registerSocket(io) {
         if (mode === 'all') {
           if (message.user_id !== userId) return ack?.({ error: 'Можно удалить у всех только своё сообщение.' });
           q.deleteRoomMessageForAll.run(userId, id);
-          io.to(`room:${message.room_id}`).emit('message:deleted', { chatType: 'room', message: q.findMessageById.get(id) });
+          io.to(`room:${message.room_id}`).emit('message:removed', { chatType: 'room', messageId: id, roomId: message.room_id });
           return ack?.({ ok: true });
         }
         q.hideMessageForUser.run(userId, 'room', id);
@@ -191,8 +191,7 @@ function registerSocket(io) {
         if (mode === 'all') {
           if (message.sender_id !== userId) return ack?.({ error: 'Можно удалить у всех только своё сообщение.' });
           q.deletePrivateMessageForAll.run(userId, id);
-          const deleted = q.findPrivateMessageById.get(id);
-          io.to(`user:${message.sender_id}`).to(`user:${message.receiver_id}`).emit('message:deleted', { chatType: 'private', message: deleted });
+          io.to(`user:${message.sender_id}`).to(`user:${message.receiver_id}`).emit('message:removed', { chatType: 'private', messageId: id });
           return ack?.({ ok: true });
         }
         q.hideMessageForUser.run(userId, 'private', id);
