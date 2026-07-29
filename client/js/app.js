@@ -448,23 +448,44 @@ async function toggleRecording(kind) {
     return;
   }
   try {
+    if (!window.isSecureContext) {
+      return toast('Для микрофона и камеры откройте сайт через HTTPS.');
+    }
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      return toast('Этот браузер не поддерживает запись аудио или видео.');
+    }
     toast(kind === 'video' ? 'Разрешите доступ к камере и микрофону.' : 'Разрешите доступ к микрофону.');
-    const stream = await navigator.mediaDevices.getUserMedia(kind === 'video' ? { audio: true, video: true } : { audio: true });
+    const constraints = kind === 'video'
+      ? { audio: true, video: { facingMode: 'user' } }
+      : { audio: { echoCancellation: true, noiseSuppression: true } };
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     state.chunks = [];
-    state.recorder = new MediaRecorder(stream);
+    const audioTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'];
+    const videoTypes = ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
+    const mimeType = (kind === 'video' ? videoTypes : audioTypes).find((type) => MediaRecorder.isTypeSupported(type)) || '';
+    state.recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
     state.recorder.ondataavailable = (event) => event.data.size && state.chunks.push(event.data);
     state.recorder.onstop = async () => {
       stream.getTracks().forEach((track) => track.stop());
-      const type = kind === 'video' ? 'video/webm' : 'audio/webm';
-      const file = new File([new Blob(state.chunks, { type })], `${kind}-${Date.now()}.webm`, { type });
-      sendMessage('', await uploadFile(file));
-      el.voiceButton.classList.remove('recording');
-      el.videoButton.classList.remove('recording');
+      try {
+        const type = state.recorder.mimeType || (kind === 'video' ? 'video/webm' : 'audio/webm');
+        const ext = type.includes('mp4') || type.includes('aac') ? 'mp4' : 'webm';
+        const file = new File([new Blob(state.chunks, { type })], `${kind}-${Date.now()}.${ext}`, { type });
+        sendMessage('', await uploadFile(file));
+      } catch (error) {
+        toast(error.message || 'Не удалось отправить запись.');
+      } finally {
+        el.voiceButton.classList.remove('recording');
+        el.videoButton.classList.remove('recording');
+      }
     };
     state.recorder.start();
     (kind === 'video' ? el.videoButton : el.voiceButton).classList.add('recording');
     toast('Запись началась. Нажмите ещё раз для отправки.');
-  } catch (_error) {
+  } catch (error) {
+    if (error.name === 'NotAllowedError') return toast('Доступ запрещён. Разрешите микрофон/камеру в настройках сайта.');
+    if (error.name === 'NotFoundError') return toast('Микрофон или камера не найдены.');
+    if (error.name === 'NotReadableError') return toast('Устройство уже используется другим приложением.');
     toast('Браузер не дал доступ к микрофону или камере.');
   }
 }
