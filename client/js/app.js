@@ -77,7 +77,8 @@ const displayName = (user) => user?.display_name || user?.username || user?.name
 let toastTimer = null;
 
 function setAppHeight() {
-  document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+  const height = window.visualViewport?.height || window.innerHeight;
+  document.documentElement.style.setProperty('--app-height', `${Math.round(height)}px`);
 }
 
 setAppHeight();
