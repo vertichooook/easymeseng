@@ -63,8 +63,8 @@ button:active { transform: translateY(1px) scale(0.98); }
   color: var(--danger);
 }
 .icon-button {
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   padding: 0;
   display: grid;
   place-items: center;
@@ -326,12 +326,14 @@ mark {
 }
 .composer {
   display: grid;
-  grid-template-columns: auto auto auto 1fr;
+  grid-template-columns: auto auto auto minmax(360px, 920px);
   gap: 10px;
   padding: 14px;
   background: var(--panel);
   border-top: 1px solid var(--line);
   transition: background-color 0.18s ease, border-color 0.18s ease;
+  align-items: end;
+  justify-content: center;
 }
 #sendButton {
   display: none;
@@ -561,24 +563,126 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   background: #000;
   box-shadow: 0 12px 28px rgb(0 0 0 / 0.12);
 }
+.media-player {
+  margin-top: 8px;
+}
+.player-play {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: white;
+  flex: 0 0 auto;
+}
+.player-play::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 11px solid currentColor;
+  transform: translateX(1px);
+}
+.player-play.paused::before {
+  width: 12px;
+  height: 14px;
+  border: 0;
+  background: linear-gradient(90deg, currentColor 0 35%, transparent 35% 65%, currentColor 65% 100%);
+  transform: none;
+}
+.player-progress {
+  min-width: 0;
+  height: 4px;
+  padding: 0;
+  border: 0;
+  accent-color: var(--accent);
+  background: transparent;
+}
+.player-time {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
 .image-media {
   background: transparent;
   object-fit: contain;
 }
 .audio-media {
+  display: none;
+}
+.audio-player {
   width: min(360px, 100%);
-  max-height: 54px;
-  background: transparent;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
   border-radius: 999px;
-  padding: 6px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--soft) 72%, var(--panel));
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.08);
 }
 .video-message-media {
-  width: min(250px, 62vw);
-  height: min(250px, 62vw);
+  width: min(236px, 58vw);
+  height: min(236px, 58vw);
   max-height: none;
   border-radius: 50%;
   object-fit: cover;
   overflow: hidden;
+}
+.video-circle-player {
+  position: relative;
+  width: min(236px, 58vw);
+  height: min(236px, 58vw);
+  border-radius: 50%;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 16px 34px rgb(0 0 0 / 0.18);
+}
+.video-circle-player .media {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+}
+.video-wide-player {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 8px;
+}
+.video-wide-player .media {
+  width: 100%;
+}
+.player-controls {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--soft) 72%, var(--panel));
+}
+.video-circle-player .player-controls {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  width: calc(100% - 34px);
+  transform: translateX(-50%);
+  border: 0;
+  background: rgb(0 0 0 / 0.52);
+  backdrop-filter: blur(10px);
+}
+.video-circle-player .player-time {
+  color: white;
+}
+.video-circle-player .player-progress {
+  accent-color: white;
 }
 .record-preview-overlay {
   position: fixed;
@@ -792,39 +896,42 @@ dialog[open] { animation: modalIn 0.16s ease both; }
     position: relative;
     grid-template-columns: 1fr;
     gap: 8px;
-    padding: 10px 12px;
+    padding: 9px 10px;
   }
   .composer textarea {
     grid-column: 1 / -1;
-    min-height: 46px;
-    padding-left: 92px;
-    padding-right: 98px;
+    min-height: 44px;
+    padding-left: 82px;
+    padding-right: 88px;
     border-radius: 999px;
     line-height: 22px;
     overflow-y: auto;
+  }
+  .composer:has(#cameraModeButton[hidden]) textarea {
+    padding-left: 48px;
   }
   .composer .icon-button,
   #sendButton {
     position: absolute;
     bottom: 12px;
     z-index: 2;
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
     padding: 0;
     border-radius: 50%;
   }
   #attachButton {
-    left: 16px;
+    left: 14px;
   }
   #cameraModeButton {
-    left: 58px;
+    left: 50px;
   }
   #recordButton {
-    right: 58px;
+    right: 50px;
   }
   #sendButton {
     display: grid;
-    right: 16px;
+    right: 14px;
     place-items: center;
     font-size: 0;
   }

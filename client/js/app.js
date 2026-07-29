@@ -166,9 +166,27 @@ function attachmentHtml(message) {
   if (message.attachment_type === 'image') return `<img class="media image-media" src="${url}" alt="${name}">`;
   if (message.attachment_type === 'video') {
     const circle = /^video-\d+\.(webm|mp4|mov|3gp)$/i.test(message.attachment_name || '');
-    return `<video class="media ${circle ? 'video-message-media' : 'video-file-media'}" src="${url}" controls playsinline preload="metadata"></video>`;
+    return `
+      <div class="media-player ${circle ? 'video-circle-player' : 'video-wide-player'}">
+        <video class="media ${circle ? 'video-message-media' : 'video-file-media'}" src="${url}" playsinline preload="metadata"></video>
+        <div class="player-controls">
+          <button class="player-play" type="button" data-player-toggle aria-label="Воспроизвести"></button>
+          <input class="player-progress" type="range" min="0" max="1000" value="0" data-player-progress aria-label="Прогресс">
+          <time class="player-time">00:00</time>
+        </div>
+      </div>
+    `;
   }
-  if (message.attachment_type === 'audio') return `<audio class="media audio-media" src="${url}" controls></audio>`;
+  if (message.attachment_type === 'audio') {
+    return `
+      <div class="media-player audio-player">
+        <audio class="media audio-media" src="${url}" preload="metadata"></audio>
+        <button class="player-play" type="button" data-player-toggle aria-label="Воспроизвести"></button>
+        <input class="player-progress" type="range" min="0" max="1000" value="0" data-player-progress aria-label="Прогресс">
+        <time class="player-time">00:00</time>
+      </div>
+    `;
+  }
   return `<a href="${url}" target="_blank" rel="noopener">${name}</a>`;
 }
 
@@ -576,6 +594,78 @@ el.messages.addEventListener('touchstart', (event) => {
   state.longPressTimer = setTimeout(() => openContextMenu(message, event.touches[0].clientX, event.touches[0].clientY), 520);
 }, { passive: true });
 ['touchend', 'touchmove', 'touchcancel'].forEach((name) => el.messages.addEventListener(name, () => clearTimeout(state.longPressTimer), { passive: true }));
+
+function formatMediaTime(value) {
+  if (!Number.isFinite(value)) return '00:00';
+  const total = Math.max(0, Math.floor(value));
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+function updateMediaPlayer(player) {
+  const media = player.querySelector('audio, video');
+  const progress = player.querySelector('[data-player-progress]');
+  const time = player.querySelector('.player-time');
+  const play = player.querySelector('[data-player-toggle]');
+  if (!media || !progress || !time || !play) return;
+  const duration = media.duration || 0;
+  progress.value = duration ? Math.round((media.currentTime / duration) * 1000) : 0;
+  time.textContent = formatMediaTime(media.currentTime || duration);
+  play.classList.toggle('paused', !media.paused);
+}
+
+el.messages.addEventListener('click', async (event) => {
+  const playButton = event.target.closest('[data-player-toggle]');
+  if (!playButton) return;
+  const player = playButton.closest('.media-player');
+  const media = player?.querySelector('audio, video');
+  if (!media) return;
+  event.preventDefault();
+  document.querySelectorAll('.media-player audio, .media-player video').forEach((item) => {
+    if (item !== media) item.pause();
+  });
+  try {
+    if (media.paused) await media.play();
+    else media.pause();
+    updateMediaPlayer(player);
+  } catch (_error) {
+    toast('Не удалось воспроизвести медиа.');
+  }
+});
+
+el.messages.addEventListener('input', (event) => {
+  const progress = event.target.closest('[data-player-progress]');
+  if (!progress) return;
+  const player = progress.closest('.media-player');
+  const media = player?.querySelector('audio, video');
+  if (!media || !media.duration) return;
+  media.currentTime = (Number(progress.value) / 1000) * media.duration;
+  updateMediaPlayer(player);
+});
+
+el.messages.addEventListener('timeupdate', (event) => {
+  const player = event.target.closest('.media-player');
+  if (player) updateMediaPlayer(player);
+}, true);
+
+el.messages.addEventListener('loadedmetadata', (event) => {
+  const player = event.target.closest('.media-player');
+  if (player) updateMediaPlayer(player);
+}, true);
+
+el.messages.addEventListener('play', (event) => {
+  const player = event.target.closest('.media-player');
+  if (player) updateMediaPlayer(player);
+}, true);
+
+el.messages.addEventListener('pause', (event) => {
+  const player = event.target.closest('.media-player');
+  if (player) updateMediaPlayer(player);
+}, true);
+
+el.messages.addEventListener('ended', (event) => {
+  const player = event.target.closest('.media-player');
+  if (player) updateMediaPlayer(player);
+}, true);
 
 el.deleteForm.addEventListener('submit', (event) => {
   event.preventDefault();
