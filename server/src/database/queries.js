@@ -108,7 +108,7 @@ module.exports = {
            receiver.avatar_url AS receiver_avatar_url, pm.body, pm.attachment_url,
            pm.attachment_type, pm.attachment_name, pm.deleted_at, pm.deleted_by,
            pm.reply_to_message_id, pm.reply_preview_author, pm.reply_preview_body,
-           pm.forwarded_from_author, pm.forwarded_from_body, pm.created_at
+           pm.forwarded_from_author, pm.forwarded_from_body, pm.read_at, pm.created_at
     FROM private_messages pm
     JOIN users sender ON sender.id = pm.sender_id
     JOIN users receiver ON receiver.id = pm.receiver_id
@@ -127,13 +127,15 @@ module.exports = {
            receiver.avatar_url AS receiver_avatar_url, pm.body, pm.attachment_url,
            pm.attachment_type, pm.attachment_name, pm.deleted_at, pm.deleted_by,
            pm.reply_to_message_id, pm.reply_preview_author, pm.reply_preview_body,
-           pm.forwarded_from_author, pm.forwarded_from_body, pm.created_at
+           pm.forwarded_from_author, pm.forwarded_from_body, pm.read_at, pm.created_at
     FROM private_messages pm
     JOIN users sender ON sender.id = pm.sender_id
     JOIN users receiver ON receiver.id = pm.receiver_id
     WHERE pm.id = ?
   `),
   deletePrivateMessageForAll: db.prepare("UPDATE private_messages SET deleted_at = datetime('now'), deleted_by = ?, body = '', attachment_url = NULL, attachment_type = NULL, attachment_name = NULL WHERE id = ?"),
+  listUnreadPrivateMessageIds: db.prepare('SELECT id FROM private_messages WHERE sender_id = ? AND receiver_id = ? AND read_at IS NULL AND deleted_at IS NULL'),
+  markPrivateMessagesRead: db.prepare("UPDATE private_messages SET read_at = datetime('now') WHERE sender_id = ? AND receiver_id = ? AND read_at IS NULL"),
   hideMessageForUser: db.prepare('INSERT OR IGNORE INTO hidden_messages (user_id, message_type, message_id) VALUES (?, ?, ?)'),
   muteChat: db.prepare('INSERT OR IGNORE INTO muted_chats (user_id, target_type, target_id) VALUES (?, ?, ?)'),
   unmuteChat: db.prepare('DELETE FROM muted_chats WHERE user_id = ? AND target_type = ? AND target_id = ?'),

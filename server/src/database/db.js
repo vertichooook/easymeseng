@@ -84,6 +84,7 @@ function initDb() {
       reply_preview_body TEXT,
       forwarded_from_author TEXT,
       forwarded_from_body TEXT,
+      read_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -140,6 +141,7 @@ function initDb() {
   migrateColumn('private_messages', 'reply_preview_body', 'TEXT');
   migrateColumn('private_messages', 'forwarded_from_author', 'TEXT');
   migrateColumn('private_messages', 'forwarded_from_body', 'TEXT');
+  migrateColumn('private_messages', 'read_at', 'TEXT');
   migrateColumn('room_members', 'role', "TEXT NOT NULL DEFAULT 'member'");
 
   const generalMigration = db.prepare("SELECT value FROM app_meta WHERE key = 'general_membership_initialized'").get();

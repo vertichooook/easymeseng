@@ -85,6 +85,17 @@ window.addEventListener('resize', setAppHeight);
 window.addEventListener('orientationchange', setAppHeight);
 window.visualViewport?.addEventListener('resize', setAppHeight);
 
+function markCurrentPrivateRead() {
+  if (state.chat.type === 'private' && state.socket?.connected) {
+    state.socket.emit('private:read', { userId: state.chat.id });
+  }
+}
+
+window.addEventListener('focus', markCurrentPrivateRead);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) markCurrentPrivateRead();
+});
+
 async function api(path, options = {}) {
   const headers = options.body instanceof FormData ? options.headers || {} : { 'Content-Type': 'application/json', ...(options.headers || {}) };
   const response = await fetch(path, { headers, ...options });
@@ -205,11 +216,14 @@ function renderMessage(message, type = state.chat.type) {
     ? { username: message.username, display_name: message.display_name, avatar_url: message.avatar_url }
     : { username: message.sender_username, display_name: message.sender_display_name, avatar_url: message.sender_avatar_url };
   const mentioned = message.body && message.body.toLowerCase().includes(`@${state.me.username}`);
+  const statusHtml = type === 'private' && mine
+    ? `<span class="message-status ${message.read_at ? 'read' : 'delivered'}" title="${message.read_at ? 'Прочитано' : 'Доставлено'}">${message.read_at ? '✓✓' : '✓'}</span>`
+    : '';
   return `
     <article class="message ${mine ? 'mine' : ''} ${mentioned ? 'mentioned' : ''}" data-message-id="${message.id}" data-message-type="${type}">
       ${avatar(authorUser, 'small')}
       <div class="message-content">
-        <div class="meta"><strong>${escapeHtml(displayName(authorUser))}</strong><time>${formatTime(message.created_at)}</time></div>
+        <div class="meta"><strong>${escapeHtml(displayName(authorUser))}</strong><time>${formatTime(message.created_at)}</time>${statusHtml}</div>
         ${message.reply_preview_author ? `<div class="reply-preview">${escapeHtml(message.reply_preview_author)}: ${escapeHtml(message.reply_preview_body)}</div>` : ''}
         ${message.forwarded_from_author ? `<div class="reply-preview">Переслано от ${escapeHtml(message.forwarded_from_author)}: ${escapeHtml(message.forwarded_from_body)}</div>` : ''}
         ${message.body ? `<p>${bodyHtml(message.body)}</p>` : ''}
@@ -326,6 +340,7 @@ async function openPrivate(user) {
   renderLists();
   const data = await api(`/api/private/${user.id}/messages`);
   el.messages.innerHTML = data.messages.map((msg) => renderMessage(msg, 'private')).join('');
+  state.socket?.emit('private:read', { userId: user.id });
   el.messages.scrollTop = el.messages.scrollHeight;
 }
 
@@ -482,6 +497,7 @@ function setupSocket() {
   state.socket.on('connect', () => {
     el.status.textContent = 'online';
     if (state.chat.type === 'room') state.socket.emit('room:join', { roomId: state.chat.id });
+    if (state.chat.type === 'private') markCurrentPrivateRead();
   });
   state.socket.on('disconnect', () => { el.status.textContent = 'offline'; });
   state.socket.on('connect_error', (error) => toast(error.message));
@@ -525,8 +541,19 @@ function setupSocket() {
     const otherId = message.sender_id === state.me.id ? message.receiver_id : message.sender_id;
     if (state.chat.type === 'private' && state.chat.id === otherId) addMessage(message, 'private');
     if (message.sender_id !== state.me.id) {
+      if (state.chat.type === 'private' && state.chat.id === otherId && document.hasFocus()) state.socket.emit('private:read', { userId: otherId });
       bumpUnread('private', otherId, message.body?.toLowerCase().includes(`@${state.me.username}`));
       showDeviceNotification(`Сообщение от ${message.sender_display_name || message.sender_username}`, message.body || message.attachment_name || 'Медиа', other?.muted);
+    }
+  });
+  state.socket.on('private:read', (event) => {
+    for (const id of event.messageIds || []) {
+      const status = document.querySelector(`[data-message-type="private"][data-message-id="${id}"] .message-status`);
+      if (!status) continue;
+      status.classList.remove('delivered');
+      status.classList.add('read');
+      status.textContent = '✓✓';
+      status.title = 'Прочитано';
     }
   });
   state.socket.on('notification:new', (event) => {
@@ -618,14 +645,18 @@ function updateMediaPlayer(player) {
   if (!media || !progress || !time || !play) return;
   const duration = media.duration || 0;
   progress.value = duration ? Math.round((media.currentTime / duration) * 1000) : 0;
+  player.style.setProperty('--player-progress', `${Number(progress.value) / 10}%`);
   time.textContent = formatMediaTime(media.currentTime || duration);
   play.classList.toggle('paused', !media.paused);
+  player.classList.toggle('playing', !media.paused);
 }
 
 el.messages.addEventListener('click', async (event) => {
   const playButton = event.target.closest('[data-player-toggle]');
-  if (!playButton) return;
-  const player = playButton.closest('.media-player');
+  const circlePlayer = event.target.closest('.video-circle-player');
+  if (!playButton && !circlePlayer) return;
+  if (event.target.closest('[data-player-progress]')) return;
+  const player = playButton?.closest('.media-player') || circlePlayer;
   const media = player?.querySelector('audio, video');
   if (!media) return;
   event.preventDefault();

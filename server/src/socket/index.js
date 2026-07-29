@@ -145,6 +145,17 @@ function registerSocket(io) {
       return ack?.({ ok: true, message: saved });
     });
 
+    socket.on('private:read', ({ userId: otherUserId }, ack) => {
+      const otherId = Number(otherUserId);
+      if (otherId === userId || !q.findUserById.get(otherId)) return ack?.({ error: 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ.' });
+      const messageIds = q.listUnreadPrivateMessageIds.all(otherId, userId).map((row) => row.id);
+      if (!messageIds.length) return ack?.({ ok: true, messageIds: [] });
+      q.markPrivateMessagesRead.run(otherId, userId);
+      io.to(`user:${otherId}`).emit('private:read', { readerId: userId, messageIds });
+      io.to(`user:${userId}`).emit('private:read', { readerId: userId, messageIds });
+      return ack?.({ ok: true, messageIds });
+    });
+
     socket.on('message:forward', ({ chatType, messageId, targets }, ack) => {
       const source = chatType === 'room' ? q.findMessageById.get(Number(messageId)) : q.findPrivateMessageById.get(Number(messageId));
       if (!source || source.deleted_at) return ack?.({ error: 'Сообщение не найдено.' });

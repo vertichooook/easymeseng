@@ -279,6 +279,16 @@ button:active { transform: translateY(1px) scale(0.98); }
   flex-wrap: wrap;
 }
 .meta strong { color: var(--text); }
+.message-status {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -2px;
+}
+.message-status.read {
+  color: var(--accent-2);
+}
 .message-action {
   background: transparent;
   color: var(--muted);
@@ -665,6 +675,21 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   overflow: hidden;
   background: #000;
   box-shadow: 0 16px 34px rgb(0 0 0 / 0.18);
+  cursor: pointer;
+  --player-progress: 0%;
+}
+.video-circle-player::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 18px;
+  height: 3px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, white var(--player-progress), rgb(255 255 255 / 0.34) 0);
+  box-shadow: 0 1px 5px rgb(0 0 0 / 0.35);
+  pointer-events: none;
 }
 .video-circle-player .media {
   width: 100%;
@@ -693,19 +718,52 @@ dialog[open] { animation: modalIn 0.16s ease both; }
 }
 .video-circle-player .player-controls {
   position: absolute;
-  left: 50%;
-  bottom: 12px;
-  width: calc(100% - 34px);
-  transform: translateX(-50%);
+  inset: 0;
+  display: block;
   border: 0;
-  background: rgb(0 0 0 / 0.52);
-  backdrop-filter: blur(10px);
+  background: linear-gradient(180deg, transparent 42%, rgb(0 0 0 / 0.32));
+  pointer-events: none;
+}
+.video-circle-player .player-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  transform: translate(-50%, -50%);
+  background: rgb(0 0 0 / 0.45);
+  border: 1px solid rgb(255 255 255 / 0.26);
+  color: white;
+  box-shadow: 0 10px 22px rgb(0 0 0 / 0.24);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.video-circle-player.playing .player-play {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.86);
+}
+.video-circle-player.playing:hover .player-play {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
 }
 .video-circle-player .player-time {
+  position: absolute;
+  left: 50%;
+  bottom: 25px;
+  transform: translateX(-50%);
   color: white;
+  text-shadow: 0 1px 5px rgb(0 0 0 / 0.45);
+  pointer-events: none;
 }
 .video-circle-player .player-progress {
-  accent-color: white;
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 12px;
+  width: calc(100% - 44px);
+  opacity: 0;
+  pointer-events: none;
 }
 .record-preview-overlay {
   position: fixed;
