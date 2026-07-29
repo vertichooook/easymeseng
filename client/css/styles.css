@@ -1440,7 +1440,6 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   }
 }
 
-/* Concept 3: workspace rail + inspector */
 .app-shell {
   grid-template-columns: 76px 326px minmax(0, 1fr) 286px;
   gap: 0;
@@ -1655,8 +1654,7 @@ dialog[open] { animation: modalIn 0.16s ease both; }
 }
 
 .inspector-card,
-.inspector-note,
-.inspector-actions {
+.inspector-members {
   padding: 16px;
   display: grid;
   gap: 10px;
@@ -1683,33 +1681,51 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   font-size: 20px;
 }
 
-.inspector-card span,
-.inspector-note {
+.inspector-card span {
   color: var(--muted);
   font-size: 13px;
 }
 
-.inspector-actions button {
-  width: 100%;
-  color: var(--text);
-  text-align: left;
-  background: var(--panel-2);
-}
-
-.inspector-actions button:hover {
-  background: color-mix(in srgb, var(--accent) 12%, var(--panel-2));
-}
-
-.inspector-note span {
+.inspector-section-title {
   color: var(--accent);
   font-weight: 850;
   text-transform: uppercase;
   font-size: 12px;
 }
 
-.inspector-note p {
-  margin: 0;
-  line-height: 1.45;
+.inspector-members-list {
+  display: grid;
+  gap: 8px;
+  max-height: min(52vh, 460px);
+  overflow-y: auto;
+}
+
+.inspector-member {
+  min-width: 0;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 2px 9px;
+  border-radius: 16px;
+  background: var(--panel-2);
+}
+
+.inspector-member .avatar {
+  grid-row: span 2;
+}
+
+.inspector-member span,
+.inspector-member small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inspector-member small {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 @media (max-width: 1120px) {
@@ -1725,7 +1741,7 @@ dialog[open] { animation: modalIn 0.16s ease both; }
 @media (max-width: 760px) {
   .app-shell {
     grid-template-columns: 1fr;
-    padding-bottom: 64px;
+    padding-bottom: 0;
   }
 
   .chat {
@@ -1766,10 +1782,10 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   }
 
   .composer {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    padding: 8px 10px max(8px, env(safe-area-inset-bottom));
   }
 
   .composer::before {
-    height: calc(100% - 72px);
+    height: calc(100% - max(16px, env(safe-area-inset-bottom)));
   }
 }

@@ -60,9 +60,7 @@ const el = {
   inspectorAvatar: document.querySelector('#inspectorAvatar'),
   inspectorTitle: document.querySelector('#inspectorTitle'),
   inspectorMeta: document.querySelector('#inspectorMeta'),
-  inspectorSettingsButton: document.querySelector('#inspectorSettingsButton'),
-  inspectorNewRoomButton: document.querySelector('#inspectorNewRoomButton'),
-  inspectorProfileButton: document.querySelector('#inspectorProfileButton'),
+  inspectorMembersList: document.querySelector('#inspectorMembersList'),
   roomSettingsModal: document.querySelector('#roomSettingsModal'),
   roomSettingsForm: document.querySelector('#roomSettingsForm'),
   roomMembers: document.querySelector('#roomMembers'),
@@ -161,6 +159,19 @@ function currentItem() {
 
 function currentChatMuted() {
   return Boolean(currentItem()?.muted);
+}
+
+function renderInspectorMembers(users = []) {
+  if (!el.inspectorMembersList) return;
+  el.inspectorMembersList.innerHTML = users.length
+    ? users.map((user) => `
+      <div class="inspector-member">
+        ${avatar(user, 'small')}
+        <span>${escapeHtml(displayName(user))}</span>
+        <small>@${escapeHtml(user.username)}</small>
+      </div>
+    `).join('')
+    : '<p class="muted-text">No participants yet.</p>';
 }
 
 function unreadBadge(type, id, muted) {
@@ -331,6 +342,7 @@ function showEmptyChat() {
   if (el.inspectorAvatar) el.inspectorAvatar.innerHTML = '<span class="avatar large">N</span>';
   if (el.inspectorTitle) el.inspectorTitle.textContent = 'Nexus';
   if (el.inspectorMeta) el.inspectorMeta.textContent = 'No active chat';
+  renderInspectorMembers([]);
   el.messages.innerHTML = '<div class="empty-chat"><strong>Здесь пока пусто</strong><span>Создайте комнату или дождитесь приглашения.</span></div>';
   renderLists();
 }
@@ -347,6 +359,12 @@ async function openRoom(room) {
   renderLists();
   const data = await api(`/api/rooms/${room.id}/messages`);
   el.messages.innerHTML = data.messages.map((msg) => renderMessage(msg, 'room')).join('');
+  try {
+    const members = await api(`/api/rooms/${room.id}/members`);
+    renderInspectorMembers(members.members);
+  } catch (_error) {
+    renderInspectorMembers([]);
+  }
   state.socket?.emit('room:join', { roomId: room.id }, (ack) => ack?.error && toast(ack.error));
   el.messages.scrollTop = el.messages.scrollHeight;
 }
@@ -363,6 +381,7 @@ async function openPrivate(user) {
   state.socket?.emit('private:read', { userId: user.id });
   const data = await api(`/api/private/${user.id}/messages`);
   el.messages.innerHTML = data.messages.map((msg) => renderMessage(msg, 'private')).join('');
+  renderInspectorMembers([user, state.me].filter(Boolean));
   el.messages.scrollTop = el.messages.scrollHeight;
 }
 
@@ -1064,10 +1083,17 @@ document.querySelector('#copyUsernameButton').onclick = async () => {
 document.querySelectorAll('[data-rail-action]').forEach((button) => {
   button.addEventListener('click', () => {
     document.querySelectorAll('[data-rail-action]').forEach((item) => item.classList.toggle('active', item === button));
-    el.sidebar.classList.add('open');
     const action = button.dataset.railAction;
-    if (action === 'rooms') document.querySelector('#roomsList')?.scrollIntoView({ block: 'center' });
-    if (action === 'users') document.querySelector('#usersList')?.scrollIntoView({ block: 'center' });
+    if (action === 'chats') {
+      el.sidebar.classList.toggle('open');
+    }
+    if (action === 'rooms') {
+      document.querySelector('#roomModal')?.showModal();
+    }
+    if (action === 'users') {
+      el.sidebar.classList.add('open');
+      document.querySelector('#usersList')?.scrollIntoView({ block: 'center' });
+    }
   });
 });
 
@@ -1082,6 +1108,10 @@ async function inviteUserToCurrentRoom(userId) {
   toast('Пользователь приглашён.');
   el.userSearchInput.value = '';
   el.userSearchResults.innerHTML = '';
+  if (state.chat.type === 'room') {
+    const members = await api(`/api/rooms/${state.chat.id}/members`);
+    renderInspectorMembers(members.members);
+  }
 }
 
 function renderUserSearchResults(users) {
@@ -1216,9 +1246,6 @@ document.querySelector('#profileForm').addEventListener('submit', async (event) 
 });
 document.querySelector('#openSidebar').onclick = () => el.sidebar.classList.add('open');
 document.querySelector('#closeSidebar').onclick = () => el.sidebar.classList.remove('open');
-if (el.inspectorSettingsButton) el.inspectorSettingsButton.onclick = () => el.chatHeaderButton.click();
-if (el.inspectorNewRoomButton) el.inspectorNewRoomButton.onclick = () => document.querySelector('#openRoomModal').click();
-if (el.inspectorProfileButton) el.inspectorProfileButton.onclick = () => document.querySelector('#profileButton').click();
 
 (async function boot() {
   try {
