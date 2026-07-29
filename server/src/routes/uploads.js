@@ -48,6 +48,7 @@ const upload = multer({
   storage,
   limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
+    if (isAllowedUpload(file)) return cb(null, true);
     if ((!baseMime(file.mimetype) || baseMime(file.mimetype) === 'application/octet-stream') && extToMime.has(extensionFromName(file.originalname))) return cb(null, true);
     if (!allowed.has(baseMime(file.mimetype))) return cb(new Error('Можно загружать только изображения, видео и аудио.'));
     return cb(null, true);
@@ -68,6 +69,10 @@ function mimeForFile(file) {
   if (mimetype === 'application/octet-stream' && extToMime.has(ext)) return extToMime.get(ext);
   if (allowed.has(mimetype)) return mimetype;
   return extToMime.get(ext) || '';
+}
+
+function isAllowedUpload(file) {
+  return allowed.has(baseMime(file?.mimetype)) || extToMime.has(extensionFromName(file?.originalname));
 }
 
 function extensionForFile(file) {
