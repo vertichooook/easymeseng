@@ -50,9 +50,8 @@
       <form id="messageForm" class="composer">
         <div id="replyBar" class="reply-bar" hidden></div>
         <input id="fileInput" type="file" accept="image/*,video/*" hidden>
-        <button id="attachButton" class="icon-button ghost" type="button" title="Фото или видео">F</button>
-        <button id="voiceButton" class="icon-button ghost" type="button" title="Голосовое">A</button>
-        <button id="videoButton" class="icon-button ghost" type="button" title="Видео">V</button>
+        <button id="attachButton" class="icon-button ghost media-icon attach-icon" type="button" title="Фото или видео" aria-label="Фото или видео"></button>
+        <button id="recordButton" class="icon-button ghost media-icon mic-icon" type="button" title="Тап: голос/видео. Удерживайте для записи" aria-label="Запись"></button>
         <textarea id="messageInput" maxlength="1000" placeholder="Напишите сообщение" rows="1"></textarea>
         <button id="sendButton" type="submit">Отправить</button>
       </form>

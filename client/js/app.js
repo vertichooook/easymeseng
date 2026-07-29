@@ -9,6 +9,10 @@ const state = {
   replyTo: null,
   contextMessage: null,
   pendingDelete: null,
+  recordMode: 'audio',
+  recordPressStarted: false,
+  recordPointerId: null,
+  recordHoldTimer: null,
   typing: new Map(),
   recorder: null,
   chunks: [],
@@ -28,8 +32,7 @@ const el = {
   input: document.querySelector('#messageInput'),
   fileInput: document.querySelector('#fileInput'),
   attachButton: document.querySelector('#attachButton'),
-  voiceButton: document.querySelector('#voiceButton'),
-  videoButton: document.querySelector('#videoButton'),
+  recordButton: document.querySelector('#recordButton'),
   replyBar: document.querySelector('#replyBar'),
   contextMenu: document.querySelector('#contextMenu'),
   deleteModal: document.querySelector('#deleteModal'),
@@ -442,11 +445,21 @@ el.fileInput.addEventListener('change', async () => {
   }
 });
 
-async function toggleRecording(kind) {
-  if (state.recorder?.state === 'recording') {
-    state.recorder.stop();
-    return;
-  }
+function updateRecordButton() {
+  if (!canRecordVideoMessage()) state.recordMode = 'audio';
+  el.recordButton.classList.toggle('mic-icon', state.recordMode === 'audio');
+  el.recordButton.classList.toggle('video-icon', state.recordMode === 'video');
+  el.recordButton.title = state.recordMode === 'audio'
+    ? (canRecordVideoMessage() ? 'Голосовое. Тап: переключить на видео. Удерживайте для записи' : 'Голосовое. Удерживайте для записи')
+    : 'Видеосообщение. Тап: переключить на голос. Удерживайте для записи';
+}
+
+function canRecordVideoMessage() {
+  return window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 760;
+}
+
+async function startRecording(kind) {
+  if (state.recorder?.state === 'recording') return;
   try {
     if (!window.isSecureContext) {
       return toast('Для микрофона и камеры откройте сайт через HTTPS.');
@@ -456,7 +469,7 @@ async function toggleRecording(kind) {
     }
     toast(kind === 'video' ? 'Разрешите доступ к камере и микрофону.' : 'Разрешите доступ к микрофону.');
     const constraints = kind === 'video'
-      ? { audio: true, video: { facingMode: 'user' } }
+      ? { audio: true, video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 480 } } }
       : { audio: { echoCancellation: true, noiseSuppression: true } };
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     state.chunks = [];
@@ -475,13 +488,12 @@ async function toggleRecording(kind) {
       } catch (error) {
         toast(error.message || 'Не удалось отправить запись.');
       } finally {
-        el.voiceButton.classList.remove('recording');
-        el.videoButton.classList.remove('recording');
+        el.recordButton.classList.remove('recording');
       }
     };
     state.recorder.start();
-    (kind === 'video' ? el.videoButton : el.voiceButton).classList.add('recording');
-    toast('Запись началась. Нажмите ещё раз для отправки.');
+    el.recordButton.classList.add('recording');
+    toast(kind === 'video' ? 'Идёт запись видео. Отпустите кнопку для отправки.' : 'Идёт запись голоса. Отпустите кнопку для отправки.');
   } catch (error) {
     if (error.name === 'NotAllowedError') return toast('Доступ запрещён. Разрешите микрофон/камеру в настройках сайта.');
     if (error.name === 'NotFoundError') return toast('Микрофон или камера не найдены.');
@@ -489,8 +501,51 @@ async function toggleRecording(kind) {
     toast('Браузер не дал доступ к микрофону или камере.');
   }
 }
-el.voiceButton.onclick = () => toggleRecording('audio');
-el.videoButton.onclick = () => toggleRecording('video');
+
+function stopRecording() {
+  if (state.recorder?.state === 'recording') state.recorder.stop();
+}
+
+el.recordButton.addEventListener('pointerdown', (event) => {
+  if (event.button !== undefined && event.button !== 0) return;
+  event.preventDefault();
+  state.recordPressStarted = false;
+  state.recordPointerId = event.pointerId;
+  el.recordButton.setPointerCapture?.(event.pointerId);
+  state.recordHoldTimer = setTimeout(async () => {
+    state.recordPressStarted = true;
+    await startRecording(state.recordMode);
+  }, 260);
+});
+
+el.recordButton.addEventListener('pointerup', (event) => {
+  event.preventDefault();
+  clearTimeout(state.recordHoldTimer);
+  if (state.recordPressStarted) {
+    stopRecording();
+  } else {
+    if (!canRecordVideoMessage()) {
+      toast('На ПК доступна запись голоса. Удерживайте кнопку для записи.');
+      updateRecordButton();
+      return;
+    }
+    state.recordMode = state.recordMode === 'audio' ? 'video' : 'audio';
+    updateRecordButton();
+    toast(state.recordMode === 'audio' ? 'Режим: голосовое сообщение.' : 'Режим: видеосообщение.');
+  }
+  state.recordPressStarted = false;
+  state.recordPointerId = null;
+});
+
+el.recordButton.addEventListener('pointercancel', () => {
+  clearTimeout(state.recordHoldTimer);
+  stopRecording();
+  state.recordPressStarted = false;
+  state.recordPointerId = null;
+});
+el.recordButton.addEventListener('contextmenu', (event) => event.preventDefault());
+updateRecordButton();
+window.addEventListener('resize', updateRecordButton);
 
 let typingSent = false;
 let typingTimeout;
