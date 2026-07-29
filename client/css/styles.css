@@ -250,6 +250,7 @@ button:active { transform: translateY(1px) scale(0.98); }
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 12px;
+  position: relative;
   overflow-wrap: anywhere;
   display: flex;
   gap: 10px;
@@ -263,6 +264,8 @@ button:active { transform: translateY(1px) scale(0.98); }
 .message.mine {
   align-self: flex-end;
   background: var(--mine);
+  padding-right: 34px;
+  padding-bottom: 22px;
 }
 .message.mentioned {
   border-color: var(--accent);
@@ -280,11 +283,16 @@ button:active { transform: translateY(1px) scale(0.98); }
 }
 .meta strong { color: var(--text); }
 .message-status {
-  margin-left: auto;
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  margin-left: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
-  letter-spacing: -2px;
+  line-height: 1;
+  letter-spacing: -3px;
+  pointer-events: none;
 }
 .message-status.read {
   color: var(--accent-2);
@@ -1235,6 +1243,12 @@ dialog {
   .composer {
     padding: 8px 10px max(8px, env(safe-area-inset-bottom));
     flex: 0 0 auto;
+  }
+
+  .composer .icon-button,
+  #sendButton {
+    top: 12px;
+    bottom: auto;
   }
 
   .composer textarea {
