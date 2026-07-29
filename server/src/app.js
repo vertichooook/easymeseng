@@ -6,7 +6,6 @@ const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const { Server } = require('socket.io');
 const config = require('./config');
-const { initDb } = require('./database/db');
 const q = require('./database/queries');
 const routes = require('./routes');
 const { attachUser } = require('./middleware/auth');
@@ -17,7 +16,6 @@ if (config.isProduction && config.sessionSecret === 'development_change_me') {
   throw new Error('Set SESSION_SECRET before running in production.');
 }
 
-initDb();
 setInterval(() => q.deleteExpiredSessions.run(), 60 * 60 * 1000).unref();
 
 const app = express();
