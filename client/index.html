@@ -132,6 +132,17 @@
     </form>
   </dialog>
 
+  <dialog id="videoPreviewModal">
+    <div class="modal-form">
+      <h2>Предпросмотр видео</h2>
+      <video id="videoPreview" class="video-preview" controls playsinline></video>
+      <menu>
+        <button id="cancelVideoPreview" type="button">Отмена</button>
+        <button id="sendVideoPreview" type="button">Отправить</button>
+      </menu>
+    </div>
+  </dialog>
+
   <div id="toast" class="toast" role="status">
     <span id="toastText"></span>
     <button id="toastClose" type="button" title="Закрыть">×</button>

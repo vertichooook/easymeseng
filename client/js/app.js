@@ -43,6 +43,10 @@ const el = {
   deleteModal: document.querySelector('#deleteModal'),
   deleteForm: document.querySelector('#deleteForm'),
   deleteForAll: document.querySelector('#deleteForAll'),
+  videoPreviewModal: document.querySelector('#videoPreviewModal'),
+  videoPreview: document.querySelector('#videoPreview'),
+  cancelVideoPreview: document.querySelector('#cancelVideoPreview'),
+  sendVideoPreview: document.querySelector('#sendVideoPreview'),
   settingsModal: document.querySelector('#settingsModal'),
   roomSettingsModal: document.querySelector('#roomSettingsModal'),
   roomSettingsForm: document.querySelector('#roomSettingsForm'),
@@ -285,6 +289,37 @@ async function uploadFile(file) {
   return (await api('/api/uploads', { method: 'POST', body: form })).attachment;
 }
 
+function isVideoFile(file) {
+  return file?.type?.startsWith('video/') || /\.(webm|mp4|mov|3gp)$/i.test(file?.name || '');
+}
+
+function previewVideo(file) {
+  if (!isVideoFile(file)) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    let done = false;
+    const finish = (result) => {
+      if (done) return;
+      done = true;
+      el.videoPreview.pause();
+      el.videoPreview.removeAttribute('src');
+      el.videoPreview.load();
+      URL.revokeObjectURL(url);
+      el.videoPreviewModal.close();
+      resolve(result);
+    };
+    el.videoPreview.src = url;
+    el.videoPreview.currentTime = 0;
+    el.cancelVideoPreview.onclick = () => finish(false);
+    el.sendVideoPreview.onclick = () => finish(true);
+    el.videoPreviewModal.oncancel = (event) => {
+      event.preventDefault();
+      finish(false);
+    };
+    el.videoPreviewModal.showModal();
+  });
+}
+
 function sendMessage(body, attachment = null) {
   if (state.chat.type === 'empty') return toast('Сначала выберите или создайте чат.');
   const eventName = state.chat.type === 'room' ? 'message:send' : 'private:send';
@@ -489,6 +524,7 @@ el.fileInput.addEventListener('change', async () => {
   const file = el.fileInput.files[0];
   if (!file) return;
   try {
+    if (!await previewVideo(file)) return;
     const attachment = await uploadFile(file);
     sendMessage(el.input.value.trim(), attachment);
   } catch (error) {
@@ -574,6 +610,7 @@ async function startRecording(kind) {
         const ext = type.includes('mp4') || type.includes('aac') ? 'mp4' : 'webm';
         if (!state.chunks.length) return toast('Запись получилась пустой. Попробуйте удерживать кнопку дольше.');
         const file = new File([new Blob(state.chunks, { type })], `${kind}-${Date.now()}.${ext}`, { type });
+        if (!await previewVideo(file)) return;
         sendMessage('', await uploadFile(file));
       } catch (error) {
         toast(error.message || 'Не удалось отправить запись.');

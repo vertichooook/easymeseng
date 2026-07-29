@@ -23,15 +23,32 @@ const allowed = new Map([
   ['audio/wav', 'wav']
 ]);
 
+const extToMime = new Map([
+  ['jpg', 'image/jpeg'],
+  ['jpeg', 'image/jpeg'],
+  ['png', 'image/png'],
+  ['webp', 'image/webp'],
+  ['gif', 'image/gif'],
+  ['mp4', 'video/mp4'],
+  ['webm', 'video/webm'],
+  ['mov', 'video/quicktime'],
+  ['3gp', 'video/3gpp'],
+  ['m4a', 'audio/mp4'],
+  ['aac', 'audio/aac'],
+  ['mp3', 'audio/mpeg'],
+  ['wav', 'audio/wav']
+]);
+
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, config.uploadDir),
-  filename: (_req, file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(10).toString('hex')}.${allowed.get(baseMime(file.mimetype))}`)
+  filename: (_req, file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(10).toString('hex')}.${extensionForFile(file)}`)
 });
 
 const upload = multer({
   storage,
   limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
+    if (baseMime(file.mimetype) === 'application/octet-stream' && extToMime.has(extensionFromName(file.originalname))) return cb(null, true);
     if (!allowed.has(baseMime(file.mimetype))) return cb(new Error('Можно загружать только изображения, видео и аудио.'));
     return cb(null, true);
   }
@@ -41,8 +58,24 @@ function baseMime(mimetype) {
   return String(mimetype || '').split(';')[0].trim().toLowerCase();
 }
 
-function mediaType(mimetype) {
-  const value = baseMime(mimetype);
+function extensionFromName(filename) {
+  return path.extname(String(filename || '')).slice(1).toLowerCase();
+}
+
+function mimeForFile(file) {
+  const mimetype = baseMime(file?.mimetype);
+  const ext = extensionFromName(file?.originalname || file?.filename);
+  if (mimetype === 'application/octet-stream' && extToMime.has(ext)) return extToMime.get(ext);
+  if (allowed.has(mimetype)) return mimetype;
+  return extToMime.get(ext) || '';
+}
+
+function extensionForFile(file) {
+  return allowed.get(mimeForFile(file)) || allowed.get(baseMime(file?.mimetype)) || extToMime.has(extensionFromName(file?.originalname)) && extensionFromName(file?.originalname) || 'webm';
+}
+
+function mediaType(file) {
+  const value = mimeForFile(file);
   if (value.startsWith('image/')) return 'image';
   if (value.startsWith('video/')) return 'video';
   if (value.startsWith('audio/')) return 'audio';
@@ -56,7 +89,7 @@ router.post('/', requireAuth, (req, res) => {
     return res.status(201).json({
       attachment: {
         url: `/uploads/${path.basename(req.file.filename)}`,
-        type: mediaType(req.file.mimetype),
+        type: mediaType(req.file),
         name: req.file.originalname.slice(0, 120)
       }
     });

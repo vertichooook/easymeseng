@@ -514,6 +514,13 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   max-height: 54px;
   background: transparent;
 }
+.video-preview {
+  width: 100%;
+  max-height: min(68vh, 520px);
+  border-radius: 14px;
+  background: #000;
+  border: 1px solid var(--line);
+}
 .empty-chat {
   margin: auto;
   display: grid;
