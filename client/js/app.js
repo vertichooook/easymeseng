@@ -76,6 +76,15 @@ const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => 
 const displayName = (user) => user?.display_name || user?.username || user?.name || '?';
 let toastTimer = null;
 
+function setAppHeight() {
+  document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+}
+
+setAppHeight();
+window.addEventListener('resize', setAppHeight);
+window.addEventListener('orientationchange', setAppHeight);
+window.visualViewport?.addEventListener('resize', setAppHeight);
+
 async function api(path, options = {}) {
   const headers = options.body instanceof FormData ? options.headers || {} : { 'Content-Type': 'application/json', ...(options.headers || {}) };
   const response = await fetch(path, { headers, ...options });
