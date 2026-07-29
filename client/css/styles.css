@@ -325,8 +325,8 @@ mark {
   font-size: 14px;
 }
 .composer {
-  display: grid;
-  grid-template-columns: auto auto auto minmax(0, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 14px;
   background: var(--panel);
@@ -343,10 +343,12 @@ mark {
   border-radius: 12px;
 }
 .composer textarea {
+  flex: 1 1 auto;
+  min-width: 0;
   align-self: center;
 }
 .reply-bar {
-  grid-column: 1 / -1;
+  flex: 0 0 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -901,6 +903,7 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   .menu-button, #closeSidebar { display: grid; }
   .message { max-width: 96%; }
   .composer {
+    display: grid;
     position: relative;
     grid-template-columns: 1fr;
     gap: 8px;
