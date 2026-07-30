@@ -1511,6 +1511,17 @@ if (el.adminModal && el.adminLoginForm && el.adminWorkspace && el.adminCodesList
     }
   });
   document.querySelector('#adminRefreshButton')?.addEventListener('click', () => loadAdminCodes().catch((error) => toast(error.message)));
+  document.querySelector('#adminLogoutButton')?.addEventListener('click', async () => {
+    try {
+      await api('/api/admin/logout', { method: 'POST', body: JSON.stringify({}) });
+    } catch (_error) {
+      // The UI should still return to the locked state if the cookie is already gone.
+    }
+    el.adminWorkspace.hidden = true;
+    el.adminLoginForm.hidden = false;
+    el.adminLoginForm.reset();
+    toast('OK');
+  });
   document.querySelector('#adminAddCodeButton')?.addEventListener('click', async () => {
     try {
       const data = await api('/api/admin/codes', { method: 'POST', body: JSON.stringify({}) });
