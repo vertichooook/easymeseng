@@ -90,6 +90,17 @@ function mediaType(file) {
   return 'file';
 }
 
+router.get('/file/:filename', requireAuth, (req, res) => {
+  const filename = path.basename(String(req.params.filename || ''));
+  if (!/^[a-zA-Z0-9.-]+$/.test(filename)) return res.status(400).json({ error: 'Некорректное имя файла.' });
+  return res.sendFile(path.join(config.uploadDir, filename), {
+    headers: {
+      'Cache-Control': 'private, max-age=604800',
+      'X-Content-Type-Options': 'nosniff'
+    }
+  });
+});
+
 router.post('/', requireAuth, (req, res) => {
   upload.single('file')(req, res, (error) => {
     if (error) return res.status(400).json({ error: error.message });

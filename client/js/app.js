@@ -84,6 +84,11 @@ const el = {
 const chatKey = (type, id) => `${type}:${id}`;
 const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
 const displayName = (user) => user?.display_name || user?.username || user?.name || '?';
+const mediaSrc = (url) => {
+  const value = String(url || '');
+  if (value.startsWith('/uploads/')) return `/api/uploads/file/${encodeURIComponent(value.split('/').pop())}`;
+  return value;
+};
 let toastTimer = null;
 
 function setAppHeight() {
@@ -281,7 +286,7 @@ function avatar(entity, size = '') {
   const cls = `avatar ${size}`;
   const base = displayName(entity).slice(0, 2).toUpperCase();
   if (entity?.avatar_url) {
-    return `<span class="${cls}" data-fallback="${escapeHtml(base)}"><img src="${escapeHtml(entity.avatar_url)}" alt=""></span>`;
+    return `<span class="${cls}" data-fallback="${escapeHtml(base)}"><img src="${escapeHtml(mediaSrc(entity.avatar_url))}" alt=""></span>`;
   }
   return `<span class="${cls}">${escapeHtml(base)}</span>`;
 }
@@ -439,7 +444,7 @@ function reactionsHtml(message) {
 
 function attachmentHtml(message) {
   if (!message.attachment_url) return '';
-  const url = escapeHtml(message.attachment_url);
+  const url = escapeHtml(mediaSrc(message.attachment_url));
   const name = escapeHtml(message.attachment_name || 'media');
   const kind = attachmentKind(message);
   if (kind === 'image') return `<img class="media image-media" src="${url}" alt="${name}">`;
