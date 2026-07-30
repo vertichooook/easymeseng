@@ -1,9 +1,31 @@
 (function () {
   let registrationPromise = null;
+  let refreshing = false;
 
   if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+
     window.addEventListener('load', () => {
-      registrationPromise = navigator.serviceWorker.register('/sw.js').catch(() => null);
+      registrationPromise = navigator.serviceWorker.register('/sw.js').then((registration) => {
+        registration.update().catch(() => {});
+        registration.addEventListener('updatefound', () => {
+          const worker = registration.installing;
+          if (!worker) return;
+          worker.addEventListener('statechange', () => {
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+              worker.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+        if (registration.waiting && navigator.serviceWorker.controller) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+        return registration;
+      }).catch(() => null);
     });
   }
 

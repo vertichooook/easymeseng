@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nexus-shell-v7';
+const CACHE_NAME = 'nexus-shell-v8';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -20,6 +20,10 @@ self.addEventListener('install', (event) => {
       .then((cache) => cache.addAll(SHELL_ASSETS))
       .then(() => self.skipWaiting())
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
