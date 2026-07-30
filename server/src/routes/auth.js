@@ -1,5 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const { db } = require('../database/db');
 const q = require('../database/queries');
 const { createSession, clearSession, requireAuth } = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimits');
@@ -17,8 +18,18 @@ router.post('/register', authLimiter, async (req, res, next) => {
     if (!password.ok) return res.status(400).json({ error: password.message });
     if (q.findUserByUsername.get(username.value)) return res.status(409).json({ error: 'Такое имя уже занято.' });
 
+    const registrationCode = String(req.body.registration_code || '').trim().toUpperCase();
+    if (!registrationCode) return res.status(400).json({ error: 'Введите регистрационный код.' });
+    const code = q.findRegistrationCode.get(registrationCode);
+    if (!code || code.user_id) return res.status(403).json({ error: 'Регистрационный код недействителен или уже использован.' });
+
     const hash = await bcrypt.hash(req.body.password, 12);
-    const result = q.createUser.run(username.value, displayName.value, hash);
+    const result = db.transaction(() => {
+      const created = q.createUser.run(username.value, displayName.value, hash);
+      const claimed = q.claimRegistrationCode.run(created.lastInsertRowid, code.id);
+      if (!claimed.changes) throw new Error('Регистрационный код уже использован.');
+      return created;
+    })();
     createSession(res, result.lastInsertRowid);
     const user = q.findUserById.get(result.lastInsertRowid);
     return res.status(201).json({ user });

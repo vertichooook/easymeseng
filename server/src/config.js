@@ -19,6 +19,7 @@ module.exports = {
   vapidPublicKey: process.env.VAPID_PUBLIC_KEY || '',
   vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
   vapidSubject: process.env.VAPID_SUBJECT || 'mailto:admin@example.com',
+  adminPassword: process.env.ADMIN_PASSWORD || '',
   maxMessageLength: 1000,
   maxUsernameLength: 32,
   maxRoomNameLength: 60

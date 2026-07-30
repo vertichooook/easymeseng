@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
+const crypto = require('crypto');
 const config = require('../config');
 
 fs.mkdirSync(path.dirname(config.databasePath), { recursive: true });
@@ -136,6 +137,15 @@ function initDb() {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS registration_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      user_id INTEGER UNIQUE,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      claimed_at TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+
     INSERT OR IGNORE INTO rooms (id, name, created_by) VALUES (1, 'general', NULL);
   `);
 
@@ -164,6 +174,7 @@ function initDb() {
   migrateColumn('private_messages', 'forwarded_from_body', 'TEXT');
   migrateColumn('private_messages', 'read_at', 'TEXT');
   migrateColumn('room_members', 'role', "TEXT NOT NULL DEFAULT 'member'");
+  migrateColumn('registration_codes', 'claimed_at', 'TEXT');
 
   const generalMigration = db.prepare("SELECT value FROM app_meta WHERE key = 'general_membership_initialized'").get();
   if (!generalMigration) {
@@ -178,6 +189,8 @@ function initDb() {
     FROM rooms
     WHERE created_by IS NOT NULL
   `).run();
+
+  backfillRegistrationCodes();
 }
 
 function migrateColumn(table, column, type) {
@@ -187,6 +200,31 @@ function migrateColumn(table, column, type) {
   }
 }
 
+function generateRegistrationCode() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let body = '';
+  for (let i = 0; i < 10; i += 1) body += alphabet[crypto.randomInt(alphabet.length)];
+  return `NX-${body.slice(0, 5)}-${body.slice(5)}`;
+}
+
+function backfillRegistrationCodes() {
+  const users = db.prepare(`
+    SELECT id FROM users
+    WHERE id NOT IN (SELECT user_id FROM registration_codes WHERE user_id IS NOT NULL)
+  `).all();
+  const insert = db.prepare("INSERT INTO registration_codes (code, user_id, claimed_at) VALUES (?, ?, datetime('now'))");
+  for (const user of users) {
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      try {
+        insert.run(generateRegistrationCode(), user.id);
+        break;
+      } catch (error) {
+        if (!String(error.message).includes('UNIQUE')) throw error;
+      }
+    }
+  }
+}
+
 initDb();
 
-module.exports = { db, initDb };
+module.exports = { db, initDb, generateRegistrationCode };

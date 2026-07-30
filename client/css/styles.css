@@ -1031,6 +1031,10 @@ dialog {
   box-shadow: var(--shadow);
 }
 
+#adminModal {
+  width: min(680px, calc(100% - 28px));
+}
+
 dialog::backdrop { background: rgb(10 14 20 / 0.55); }
 dialog[open] { animation: modalIn 0.16s ease both; }
 
@@ -1038,6 +1042,49 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   padding: 24px;
   display: grid;
   gap: 14px;
+}
+
+.admin-panel {
+  width: min(620px, calc(100vw - 28px));
+}
+
+.admin-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-codes-list {
+  max-height: min(54vh, 520px);
+  overflow-y: auto;
+  display: grid;
+  gap: 8px;
+}
+
+.admin-code-row {
+  padding: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-2);
+}
+
+.admin-code-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.admin-code-row small {
+  color: var(--muted);
+}
+
+.admin-code-row button,
+#newRegistrationCode {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .modal-form h2 { margin: 0; }

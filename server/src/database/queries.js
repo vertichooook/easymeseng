@@ -39,6 +39,17 @@ module.exports = {
   updateDisplayName: db.prepare('UPDATE users SET display_name = ? WHERE id = ?'),
   updateAvatar: db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?'),
 
+  findRegistrationCode: db.prepare('SELECT id, code, user_id, created_at, claimed_at FROM registration_codes WHERE code = ?'),
+  claimRegistrationCode: db.prepare("UPDATE registration_codes SET user_id = ?, claimed_at = datetime('now') WHERE id = ? AND user_id IS NULL"),
+  createRegistrationCode: db.prepare('INSERT INTO registration_codes (code) VALUES (?)'),
+  listRegistrationCodes: db.prepare(`
+    SELECT rc.id, rc.code, rc.user_id, rc.created_at, rc.claimed_at,
+           users.username, users.display_name, users.avatar_url
+    FROM registration_codes rc
+    LEFT JOIN users ON users.id = rc.user_id
+    ORDER BY rc.user_id IS NULL DESC, rc.created_at DESC
+  `),
+
   createSession: db.prepare('INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)'),
   findSession: db.prepare('SELECT sessions.id AS session_id, sessions.expires_at, users.id, users.username, users.display_name, users.avatar_url, users.created_at FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.id = ?'),
   deleteSession: db.prepare('DELETE FROM sessions WHERE id = ?'),

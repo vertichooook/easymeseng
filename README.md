@@ -50,7 +50,7 @@ nano .env
 openssl rand -hex 32
 ```
 
-Вставьте результат в `SESSION_SECRET`. Для Docker оставьте `DATABASE_PATH=/app/data/messenger.sqlite`, `UPLOAD_DIR=/app/uploads`, `COOKIE_SECURE=true`, `TRUST_PROXY=1`.
+Вставьте результат в `SESSION_SECRET`. Для админ-раздела в настройках приложения задайте `ADMIN_PASSWORD`. Для Docker оставьте `DATABASE_PATH=/app/data/messenger.sqlite`, `UPLOAD_DIR=/app/uploads`, `COOKIE_SECURE=true`, `TRUST_PROXY=1`.
 
 ## Запуск через Docker Compose
 

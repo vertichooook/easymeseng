@@ -5,6 +5,7 @@ const users = require('./users');
 const privateRoutes = require('./private');
 const uploads = require('./uploads');
 const push = require('./push');
+const admin = require('./admin');
 
 const router = express.Router();
 
@@ -15,5 +16,6 @@ router.use('/users', users);
 router.use('/private', privateRoutes);
 router.use('/uploads', uploads);
 router.use('/push', push);
+router.use('/admin', admin);
 
 module.exports = router;

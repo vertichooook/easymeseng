@@ -150,8 +150,37 @@
       <button id="themeButton" type="button">Переключить тему</button>
       <button id="notifyButton" type="button">Разрешить уведомления</button>
       <button id="copyUsernameButton" type="button">Скопировать username</button>
+      <button id="adminOpenButton" type="button">Администрирование</button>
       <p class="muted-text" id="settingsUsername"></p>
       <button id="closeSettings" type="button">Закрыть</button>
+    </div>
+  </dialog>
+
+  <dialog id="adminModal">
+    <div class="modal-form admin-panel">
+      <h2>Администрирование</h2>
+      <form id="adminLoginForm" class="admin-login">
+        <label>Пароль администратора<input name="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit">Войти</button>
+      </form>
+      <div id="adminWorkspace" hidden>
+        <div class="admin-actions">
+          <button id="adminAddCodeButton" type="button">Добавить пользователя</button>
+          <button id="adminRefreshButton" type="button">Обновить</button>
+        </div>
+        <div id="adminCodesList" class="admin-codes-list"></div>
+      </div>
+      <button id="adminCloseButton" type="button">Закрыть</button>
+    </div>
+  </dialog>
+
+  <dialog id="registrationCodeModal">
+    <div class="modal-form">
+      <h2>Код регистрации</h2>
+      <p class="muted-text">Передайте этот код новому пользователю. После регистрации он закрепится за аккаунтом.</p>
+      <input id="newRegistrationCode" readonly>
+      <button id="copyRegistrationCodeButton" type="button">Скопировать код</button>
+      <button id="closeRegistrationCodeButton" type="button">Готово</button>
     </div>
   </dialog>
 
