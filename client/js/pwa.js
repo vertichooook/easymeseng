@@ -82,6 +82,11 @@
         await registration.showNotification(title, {
           badge: '/icons/nexus-maskable.svg',
           icon: '/icons/nexus-icon.svg',
+          renotify: true,
+          requireInteraction: true,
+          silent: false,
+          timestamp: Date.now(),
+          vibrate: [120, 60, 120],
           data: { url: '/', ...(options.data || {}) },
           ...options
         });

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nexus-shell-v6';
+const CACHE_NAME = 'nexus-shell-v7';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -61,8 +61,15 @@ self.addEventListener('push', (event) => {
       icon: '/icons/nexus-icon.svg',
       badge: '/icons/nexus-maskable.svg',
       tag: data.tag || 'nexus-message',
+      renotify: true,
+      requireInteraction: true,
+      silent: false,
+      timestamp: Date.now(),
+      vibrate: [120, 60, 120],
+      actions: [
+        { action: 'open', title: 'Открыть' }
+      ],
       data: { url: data.url || '/', chat: data.chat || null },
-      renotify: true
     })
   );
 });
