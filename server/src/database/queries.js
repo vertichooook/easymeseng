@@ -140,5 +140,19 @@ module.exports = {
   muteChat: db.prepare('INSERT OR IGNORE INTO muted_chats (user_id, target_type, target_id) VALUES (?, ?, ?)'),
   unmuteChat: db.prepare('DELETE FROM muted_chats WHERE user_id = ? AND target_type = ? AND target_id = ?'),
   findMutedChat: db.prepare('SELECT 1 FROM muted_chats WHERE user_id = ? AND target_type = ? AND target_id = ?'),
-  listMutedChats: db.prepare('SELECT target_type, target_id FROM muted_chats WHERE user_id = ?')
+  listMutedChats: db.prepare('SELECT target_type, target_id FROM muted_chats WHERE user_id = ?'),
+
+  upsertPushSubscription: db.prepare(`
+    INSERT INTO push_subscriptions (endpoint, user_id, p256dh, auth, user_agent)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(endpoint) DO UPDATE SET
+      user_id = excluded.user_id,
+      p256dh = excluded.p256dh,
+      auth = excluded.auth,
+      user_agent = excluded.user_agent,
+      updated_at = datetime('now')
+  `),
+  deletePushSubscription: db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ? AND user_id = ?'),
+  deletePushSubscriptionByEndpoint: db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?'),
+  listPushSubscriptionsForUser: db.prepare('SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?')
 };

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nexus-shell-v1';
+const CACHE_NAME = 'nexus-shell-v2';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -42,6 +42,26 @@ self.addEventListener('fetch', (event) => {
         return response;
       })
       .catch(() => caches.match(event.request).then((cached) => cached || caches.match('/index.html')))
+  );
+});
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (_error) {
+    data = { body: event.data?.text() || '' };
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Nexus', {
+      body: data.body || '',
+      icon: '/icons/nexus-icon.svg',
+      badge: '/icons/nexus-maskable.svg',
+      tag: data.tag || 'nexus-message',
+      data: { url: data.url || '/', chat: data.chat || null },
+      renotify: true
+    })
   );
 });
 

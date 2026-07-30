@@ -16,6 +16,9 @@ module.exports = {
   uploadDir: process.env.UPLOAD_DIR || path.resolve(__dirname, '../../uploads'),
   cookieSecure: bool(process.env.COOKIE_SECURE, process.env.NODE_ENV === 'production'),
   trustProxy: Number(process.env.TRUST_PROXY || 0),
+  vapidPublicKey: process.env.VAPID_PUBLIC_KEY || '',
+  vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
+  vapidSubject: process.env.VAPID_SUBJECT || 'mailto:admin@example.com',
   maxMessageLength: 1000,
   maxUsernameLength: 32,
   maxRoomNameLength: 60

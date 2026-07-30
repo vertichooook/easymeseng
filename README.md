@@ -127,7 +127,47 @@ Nexus можно установить как приложение-сайт: он
 - в браузере нажать `Добавить на главный экран` / `Install app`;
 - в настройках Nexus нажать `Разрешить уведомления`.
 
-Важно: текущие уведомления работают для открытого сайта/PWA и фонового браузерного процесса. Уведомления при полностью закрытом приложении требуют отдельной Web Push-инфраструктуры с VAPID-ключами и подписками.
+Важно: для push-уведомлений нужен HTTPS, VAPID-ключи в `.env` и разрешение уведомлений в браузере.
+
+## Web Push уведомления
+
+Теперь Nexus поддерживает настоящие Web Push уведомления через VAPID. Они работают через HTTPS и service worker, поэтому устройство может получать уведомления даже когда сайт установлен как PWA или открыт в фоне.
+
+Сгенерируйте ключи на сервере:
+
+```bash
+cd /var/www/messenger
+docker compose run --rm backend npx web-push generate-vapid-keys
+```
+
+Если запускаете backend без Docker:
+
+```bash
+cd /var/www/messenger/server
+npx web-push generate-vapid-keys
+```
+
+Добавьте значения в `.env`:
+
+```env
+VAPID_PUBLIC_KEY=ваш_public_key
+VAPID_PRIVATE_KEY=ваш_private_key
+VAPID_SUBJECT=mailto:vertichoklive@gmail.com
+```
+
+После изменения `.env` перезапустите backend:
+
+```bash
+docker compose up -d --build
+```
+
+Проверка:
+
+```bash
+curl -s https://chat-nexus.duckdns.org/api/push/public-key
+```
+
+В ответе должно быть `"enabled":true`. После этого зайдите в Nexus, откройте настройки сайта и нажмите кнопку уведомлений. Браузер сохранит push-подписку в SQLite.
 
 ## Firewall UFW
 

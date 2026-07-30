@@ -3,6 +3,7 @@ const signature = require('cookie-signature');
 const config = require('../config');
 const q = require('../database/queries');
 const { COOKIE_NAME } = require('../middleware/auth');
+const push = require('../utils/push');
 
 const online = new Map();
 const typingTimers = new Map();
@@ -71,6 +72,26 @@ function notifyMentions(io, sender, body, chat) {
   }
 }
 
+function queuePush(userId, payload) {
+  push.sendPushToUser(userId, payload).catch((error) => {
+    console.error('Web Push queue failed:', error.message);
+  });
+}
+
+function notifyRoomPushes(sender, roomId, roomName, message) {
+  for (const member of q.listRoomMembers.all(roomId)) {
+    if (member.id === sender.id) continue;
+    if (q.findMutedChat.get(member.id, 'room', roomId)) continue;
+    queuePush(member.id, {
+      title: `# ${roomName || 'room'}`,
+      body: `${sender.display_name || sender.username}: ${push.compactBody(message)}`,
+      url: `/?chat=room-${roomId}`,
+      tag: `room-${roomId}`,
+      chat: { type: 'room', id: roomId }
+    });
+  }
+}
+
 function socketAuth(socket, next) {
   try {
     const sessionId = parseSignedCookie(socket);
@@ -103,7 +124,8 @@ function registerSocket(io) {
 
     socket.on('room:join', ({ roomId }, ack) => {
       const id = Number(roomId);
-      if (!q.findRoomById.get(id)) return ack?.({ error: 'Комната не найдена.' });
+      const room = q.findRoomById.get(id);
+      if (!room) return ack?.({ error: 'Комната не найдена.' });
       if (!canAccessRoom(id, userId)) return ack?.({ error: 'Нет доступа к комнате.' });
       socket.join(`room:${id}`);
       return ack?.({ ok: true });
@@ -113,7 +135,8 @@ function registerSocket(io) {
 
     socket.on('message:send', ({ roomId, body, attachment, replyTo }, ack) => {
       const id = Number(roomId);
-      if (!q.findRoomById.get(id)) return ack?.({ error: 'Комната не найдена.' });
+      const room = q.findRoomById.get(id);
+      if (!room) return ack?.({ error: 'Комната не найдена.' });
       if (!canAccessRoom(id, userId)) return ack?.({ error: 'Нет доступа к комнате.' });
       const file = normalizeAttachment(attachment);
       if (!file.ok) return ack?.({ error: file.message });
@@ -124,12 +147,14 @@ function registerSocket(io) {
       const saved = q.findMessageById.get(result.lastInsertRowid);
       io.to(`room:${id}`).emit('message:new', saved);
       notifyMentions(io, socket.user, message.value, { type: 'room', id });
+      notifyRoomPushes(socket.user, id, room.name, saved);
       return ack?.({ ok: true, message: saved });
     });
 
     socket.on('private:send', ({ receiverId, body, attachment, replyTo }, ack) => {
       const targetId = Number(receiverId);
-      if (targetId === userId || !q.findUserById.get(targetId)) return ack?.({ error: 'Пользователь не найден.' });
+      const target = q.findUserById.get(targetId);
+      if (targetId === userId || !target) return ack?.({ error: 'Пользователь не найден.' });
       const file = normalizeAttachment(attachment);
       if (!file.ok) return ack?.({ error: file.message });
       const message = normalizeBody(body, file.value);
@@ -140,6 +165,15 @@ function registerSocket(io) {
       emitPrivate(io, userId, targetId, saved);
       if (!q.findMutedChat.get(targetId, 'user', userId)) {
         io.to(`user:${targetId}`).emit('notification:new', { title: `Сообщение от ${socket.user.username}`, body: message.value.slice(0, 120), chat: { type: 'private', id: userId } });
+      }
+      if (!q.findMutedChat.get(targetId, 'user', userId)) {
+        queuePush(targetId, {
+          title: `Сообщение от ${socket.user.display_name || socket.user.username}`,
+          body: push.compactBody(saved),
+          url: `/?chat=private-${userId}`,
+          tag: `private-${userId}`,
+          chat: { type: 'private', id: userId }
+        });
       }
       notifyMentions(io, socket.user, message.value, { type: 'private', id: userId });
       return ack?.({ ok: true, message: saved });

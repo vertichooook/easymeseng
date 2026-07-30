@@ -550,6 +550,7 @@ function bumpUnread(type, id, mentioned = false) {
 
 async function showDeviceNotification(title, body, muted = false) {
   if (muted || !('Notification' in window) || Notification.permission !== 'granted' || document.hasFocus()) return;
+  if (await window.nexusPwa?.hasPushSubscription?.().catch(() => false)) return;
   const shown = await window.nexusPwa?.showNotification(title, { body, data: { url: '/' } }).catch(() => false);
   if (!shown) new Notification(title, { body });
 }
@@ -1110,9 +1111,13 @@ document.querySelector('#themeButton').onclick = () => {
   localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
 };
 document.querySelector('#notifyButton').onclick = async () => {
-  if (!('Notification' in window)) return toast('Браузер не поддерживает уведомления.');
-  const result = await Notification.requestPermission();
-  toast(result === 'granted' ? 'Уведомления включены.' : 'Уведомления не разрешены.');
+  try {
+    if (!window.nexusPwa?.isPushSupported?.()) return toast('Браузер не поддерживает push-уведомления.');
+    await window.nexusPwa.subscribePush();
+    toast('Push-уведомления включены.');
+  } catch (error) {
+    toast(error.message || 'Не удалось включить уведомления.');
+  }
 };
 document.querySelector('#copyUsernameButton').onclick = async () => {
   await navigator.clipboard.writeText(`@${state.me.username}`);
