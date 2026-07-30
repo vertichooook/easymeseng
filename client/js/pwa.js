@@ -1,14 +1,7 @@
 (function () {
   let registrationPromise = null;
-  let refreshing = false;
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (refreshing) return;
-      refreshing = true;
-      window.location.reload();
-    });
-
     window.addEventListener('load', () => {
       registrationPromise = navigator.serviceWorker.register('/sw.js').then((registration) => {
         registration.update().catch(() => {});
@@ -18,11 +11,13 @@
           worker.addEventListener('statechange', () => {
             if (worker.state === 'installed' && navigator.serviceWorker.controller) {
               worker.postMessage({ type: 'SKIP_WAITING' });
+              localStorage.setItem('nexus:updateReady', '1');
             }
           });
         });
         if (registration.waiting && navigator.serviceWorker.controller) {
           registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          localStorage.setItem('nexus:updateReady', '1');
         }
         return registration;
       }).catch(() => null);

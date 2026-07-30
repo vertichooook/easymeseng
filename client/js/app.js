@@ -123,11 +123,39 @@ document.addEventListener('visibilitychange', () => {
 });
 
 async function api(path, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeout || 12000);
   const headers = options.body instanceof FormData ? options.headers || {} : { 'Content-Type': 'application/json', ...(options.headers || {}) };
-  const response = await fetch(path, { headers, ...options });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || 'Ошибка запроса.');
-  return payload;
+  try {
+    const response = await fetch(path, { headers, ...options, signal: controller.signal });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(payload.error || 'Ошибка запроса.');
+      error.status = response.status;
+      throw error;
+    }
+    return payload;
+  } catch (error) {
+    if (error.name === 'AbortError') throw new Error('Сервер не ответил вовремя. Обновите страницу.');
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function showBootError(error) {
+  if (!el.loadingScreen) return;
+  el.loadingScreen.innerHTML = `
+    <div class="loading-desktop boot-error">
+      <span class="logo-mark large">N</span>
+      <div>
+        <strong>Nexus</strong>
+        <p>${escapeHtml(error.message || 'Не удалось загрузить приложение.')}</p>
+        <button type="button" id="reloadAppButton">Обновить</button>
+      </div>
+    </div>
+  `;
+  document.querySelector('#reloadAppButton')?.addEventListener('click', () => location.reload());
 }
 
 function toast(message) {
@@ -1597,6 +1625,10 @@ document.querySelector('#closeSidebar').onclick = () => setSidebarOpen(false);
     el.loadingScreen.classList.add('done');
     showChangelogIfNeeded();
   } catch (_error) {
-    location.href = '/login.html';
+    if (_error.status === 401) {
+      location.href = '/login.html';
+      return;
+    }
+    showBootError(_error);
   }
 }());
