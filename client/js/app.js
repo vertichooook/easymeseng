@@ -24,7 +24,9 @@ const state = {
   typing: new Map(),
   recorder: null,
   chunks: [],
-  longPressTimer: null
+  longPressTimer: null,
+  longPressTriggered: false,
+  lastReactionTap: null
 };
 
 const el = {
@@ -403,18 +405,32 @@ function bodyHtml(body) {
   return escapeHtml(body).replace(/@([a-z0-9_]{3,32})/gi, '<mark>@$1</mark>');
 }
 
-const reactionIcons = { heart: '♥', like: '👍', fire: '🔥', cry: '😢', angry: '😡', dislike: '👎' };
+const reactionIcons = { heart: '❤️', like: '👍', fire: '🔥', cry: '😢', angry: '😡', dislike: '👎' };
 
 setupDefaultReactionSetting();
 
+function attachmentKind(message) {
+  const declared = String(message.attachment_type || '').toLowerCase();
+  if (['image', 'video', 'audio'].includes(declared)) return declared;
+  if (declared.startsWith('image/')) return 'image';
+  if (declared.startsWith('video/')) return 'video';
+  if (declared.startsWith('audio/')) return 'audio';
+  const source = `${message.attachment_name || ''} ${message.attachment_url || ''}`.toLowerCase();
+  if (/\.(png|jpe?g|webp|gif|avif)(\?|#|$|\s)/.test(source)) return 'image';
+  if (/\.(webm|mp4|mov|m4v|3gp|ogv)(\?|#|$|\s)/.test(source)) return 'video';
+  if (/\.(webm|mp3|m4a|aac|wav|ogg|oga)(\?|#|$|\s)/.test(source)) return 'audio';
+  return 'file';
+}
+
 function reactionsHtml(message) {
   const counts = message.reactions || {};
+  const entries = Object.entries(reactionIcons).filter(([key]) => counts[key] || message.my_reaction === key);
   return `
     <div class="reactions" data-reactions>
-      ${Object.entries(reactionIcons).map(([key, icon]) => `
-        <button class="reaction-button ${message.my_reaction === key ? 'active' : ''}" type="button" data-react="${key}">
+      ${entries.map(([key, icon]) => `
+        <button class="reaction-chip ${message.my_reaction === key ? 'active' : ''}" type="button" data-react="${key}">
           <span>${icon}</span>
-          <b>${counts[key] || ''}</b>
+          <b>${counts[key] || 1}</b>
         </button>
       `).join('')}
     </div>
@@ -425,8 +441,9 @@ function attachmentHtml(message) {
   if (!message.attachment_url) return '';
   const url = escapeHtml(message.attachment_url);
   const name = escapeHtml(message.attachment_name || 'media');
-  if (message.attachment_type === 'image') return `<img class="media image-media" src="${url}" alt="${name}">`;
-  if (message.attachment_type === 'video') {
+  const kind = attachmentKind(message);
+  if (kind === 'image') return `<img class="media image-media" src="${url}" alt="${name}">`;
+  if (kind === 'video') {
     const circle = /^video-\d+\.(webm|mp4|mov|3gp)$/i.test(message.attachment_name || '');
     return `
       <div class="media-player ${circle ? 'video-circle-player' : 'video-wide-player'}">
@@ -439,7 +456,7 @@ function attachmentHtml(message) {
       </div>
     `;
   }
-  if (message.attachment_type === 'audio') {
+  if (kind === 'audio') {
     return `
       <div class="media-player audio-player">
         <audio class="media audio-media" src="${url}" preload="metadata"></audio>
@@ -485,11 +502,14 @@ function updateMessageReactions(event) {
   const message = document.querySelector(`[data-message-type="${event.chatType}"][data-message-id="${event.messageId}"]`);
   const holder = message?.querySelector('[data-reactions]');
   if (!holder) return;
-  holder.querySelectorAll('[data-react]').forEach((button) => {
-    const key = button.dataset.react;
-    if (Object.prototype.hasOwnProperty.call(event, 'my_reaction')) button.classList.toggle('active', event.my_reaction === key);
-    button.querySelector('b').textContent = event.reactions?.[key] || '';
-  });
+  holder.innerHTML = Object.entries(reactionIcons)
+    .filter(([key]) => event.reactions?.[key] || event.my_reaction === key)
+    .map(([key, icon]) => `
+      <button class="reaction-chip ${event.my_reaction === key ? 'active' : ''}" type="button" data-react="${key}">
+        <span>${icon}</span>
+        <b>${event.reactions?.[key] || 1}</b>
+      </button>
+    `).join('');
 }
 
 function reactToMessage(message, reaction = getDefaultReaction()) {
@@ -884,8 +904,17 @@ function openContextMenu(messageEl, x, y) {
     author: messageEl.querySelector('.meta strong')?.textContent || '',
     body: messageEl.querySelector('.message-content p')?.textContent || 'медиа'
   };
-  el.contextMenu.style.left = `${Math.min(x, innerWidth - 170)}px`;
-  el.contextMenu.style.top = `${Math.min(y, innerHeight - 140)}px`;
+  if (!el.contextMenu.querySelector('[data-reaction-picker]')) {
+    el.contextMenu.insertAdjacentHTML('afterbegin', `
+      <div class="reaction-picker" data-reaction-picker>
+        ${Object.entries(reactionIcons).map(([key, icon]) => `
+          <button class="reaction-pick" type="button" data-reaction-pick="${key}" aria-label="${key}">${icon}</button>
+        `).join('')}
+      </div>
+    `);
+  }
+  el.contextMenu.style.left = `${Math.min(x, innerWidth - 244)}px`;
+  el.contextMenu.style.top = `${Math.min(y, innerHeight - 210)}px`;
   el.contextMenu.hidden = false;
 }
 
@@ -894,6 +923,13 @@ document.addEventListener('click', async (event) => {
   if (event.target.closest('[data-cancel-reply]')) {
     state.replyTo = null;
     updateReplyBar();
+    return;
+  }
+  const pickedReaction = event.target.closest('[data-reaction-pick]')?.dataset.reactionPick;
+  if (pickedReaction && state.contextMessage) {
+    const message = document.querySelector(`[data-message-type="${state.contextMessage.type}"][data-message-id="${state.contextMessage.id}"]`);
+    reactToMessage(message, pickedReaction);
+    el.contextMenu.hidden = true;
     return;
   }
   const menuAction = event.target.closest('[data-menu-action]')?.dataset.menuAction;
@@ -940,9 +976,36 @@ el.messages.addEventListener('dblclick', (event) => {
 el.messages.addEventListener('touchstart', (event) => {
   const message = event.target.closest('[data-message-id]');
   if (!message) return;
-  state.longPressTimer = setTimeout(() => openContextMenu(message, event.touches[0].clientX, event.touches[0].clientY), 520);
+  state.longPressTriggered = false;
+  state.longPressTimer = setTimeout(() => {
+    state.longPressTriggered = true;
+    openContextMenu(message, event.touches[0].clientX, event.touches[0].clientY);
+  }, 520);
 }, { passive: true });
-['touchend', 'touchmove', 'touchcancel'].forEach((name) => el.messages.addEventListener(name, () => clearTimeout(state.longPressTimer), { passive: true }));
+el.messages.addEventListener('touchend', (event) => {
+  clearTimeout(state.longPressTimer);
+  if (state.longPressTriggered) return;
+  if (event.target.closest('[data-react], .media-player, .message-action, [data-player-progress]')) return;
+  const message = event.target.closest('[data-message-id]');
+  const touch = event.changedTouches[0];
+  if (!message || !touch) return;
+  const now = Date.now();
+  const current = { id: message.dataset.messageId, type: message.dataset.messageType, x: touch.clientX, y: touch.clientY, time: now };
+  const previous = state.lastReactionTap;
+  const sameMessage = previous && previous.id === current.id && previous.type === current.type;
+  const closeEnough = previous && Math.abs(previous.x - current.x) < 30 && Math.abs(previous.y - current.y) < 30;
+  if (sameMessage && closeEnough && now - previous.time < 330) {
+    event.preventDefault();
+    state.lastReactionTap = null;
+    reactToMessage(message, getDefaultReaction());
+    return;
+  }
+  state.lastReactionTap = current;
+}, { passive: false });
+['touchmove', 'touchcancel'].forEach((name) => el.messages.addEventListener(name, () => {
+  clearTimeout(state.longPressTimer);
+  state.longPressTriggered = false;
+}, { passive: true }));
 
 function formatMediaTime(value) {
   if (!Number.isFinite(value)) return '00:00';

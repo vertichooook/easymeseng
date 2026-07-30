@@ -554,36 +554,37 @@ img.avatar {
 .message-status.read { color: var(--accent-3); }
 
 .reactions {
-  margin-top: 8px;
+  margin-top: 6px;
   display: flex;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
 }
 
-.reaction-button {
-  min-width: 34px;
-  height: 28px;
-  padding: 0 8px;
+.reaction-chip {
+  min-width: 32px;
+  height: 24px;
+  padding: 0 7px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
   border-radius: 999px;
-  color: var(--muted);
-  background: color-mix(in srgb, var(--panel-2) 70%, transparent);
-  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
-}
-
-.reaction-button:hover,
-.reaction-button.active {
   color: var(--text);
-  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
-  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel-2));
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
+  font-size: 13px;
 }
 
-.reaction-button b {
+.reaction-chip:hover,
+.reaction-chip.active {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 20%, var(--panel));
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+}
+
+.reaction-chip b {
   min-width: 8px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .message-action {
@@ -974,7 +975,7 @@ mark {
 .context-menu {
   position: fixed;
   z-index: 50;
-  width: 180px;
+  width: 232px;
   padding: 6px;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -984,12 +985,40 @@ mark {
 }
 
 .context-menu[hidden] { display: none !important; }
+
+.reaction-picker {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
 .context-menu button {
   width: 100%;
   color: var(--text);
   text-align: left;
   background: transparent;
 }
+
+.context-menu .reaction-pick {
+  width: 100%;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  font-size: 21px;
+  text-align: center;
+}
+
+.context-menu .reaction-pick:hover {
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel-2));
+  transform: translateY(-1px) scale(1.04);
+}
+
 .context-menu button:hover { background: var(--panel-2); }
 
 dialog {
