@@ -275,8 +275,6 @@ function setupDefaultReactionSetting() {
   select.addEventListener('change', () => localStorage.setItem('nexus:defaultReaction', select.value));
 }
 
-setupDefaultReactionSetting();
-
 function avatar(entity, size = '') {
   const cls = `avatar ${size}`;
   const base = displayName(entity).slice(0, 2).toUpperCase();
@@ -406,6 +404,8 @@ function bodyHtml(body) {
 }
 
 const reactionIcons = { heart: '♥', like: '👍', fire: '🔥', cry: '😢', angry: '😡', dislike: '👎' };
+
+setupDefaultReactionSetting();
 
 function reactionsHtml(message) {
   const counts = message.reactions || {};
