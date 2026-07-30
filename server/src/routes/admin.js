@@ -20,8 +20,8 @@ function adminCookieOptions() {
 }
 
 function safeEqual(a, b) {
-  const left = Buffer.from(String(a || ''));
-  const right = Buffer.from(String(b || ''));
+  const left = Buffer.from(String(a || '').trim());
+  const right = Buffer.from(String(b || '').trim());
   return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
