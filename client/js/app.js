@@ -217,10 +217,19 @@ function avatar(entity, size = '') {
   const cls = `avatar ${size}`;
   const base = displayName(entity).slice(0, 2).toUpperCase();
   if (entity?.avatar_url) {
-    return `<span class="${cls}"><img src="${escapeHtml(entity.avatar_url)}" alt="" onerror="this.remove();this.parentElement.textContent='${escapeHtml(base)}';"></span>`;
+    return `<span class="${cls}" data-fallback="${escapeHtml(base)}"><img src="${escapeHtml(entity.avatar_url)}" alt=""></span>`;
   }
   return `<span class="${cls}">${escapeHtml(base)}</span>`;
 }
+
+document.addEventListener('error', (event) => {
+  const image = event.target;
+  if (!(image instanceof HTMLImageElement) || !image.closest('.avatar')) return;
+  const holder = image.closest('.avatar');
+  const fallback = holder.dataset.fallback || '??';
+  image.remove();
+  holder.textContent = fallback;
+}, true);
 
 function formatTime(value) {
   return new Date(`${value}Z`).toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
