@@ -4,6 +4,7 @@ const config = require('../config');
 const q = require('../database/queries');
 const { COOKIE_NAME } = require('../middleware/auth');
 const push = require('../utils/push');
+const { allowedReactions, decorateMessage, reactionPayload } = require('../utils/reactions');
 
 const online = new Map();
 const typingTimers = new Map();
@@ -64,6 +65,7 @@ function notifyMentions(io, sender, body, chat) {
     const muteType = chat.type === 'room' ? 'room' : 'user';
     const muteId = chat.type === 'room' ? chat.id : sender.id;
     if (q.findMutedChat.get(id, muteType, muteId)) continue;
+    if (isUserActive(id)) continue;
     io.to(`user:${id}`).emit('notification:new', {
       title: `Вас упомянул ${sender.username}`,
       body: String(body || '').slice(0, 120),
@@ -72,7 +74,12 @@ function notifyMentions(io, sender, body, chat) {
   }
 }
 
+function isUserActive(userId) {
+  return Boolean(online.get(userId)?.active);
+}
+
 function queuePush(userId, payload) {
+  if (isUserActive(userId)) return;
   push.sendPushToUser(userId, payload).catch((error) => {
     console.error('Web Push queue failed:', error.message);
   });
@@ -117,6 +124,9 @@ function registerSocket(io) {
     const existing = online.get(userId) || { user: socket.user, sockets: new Set() };
     existing.user = socket.user;
     existing.sockets.add(socket.id);
+    existing.activeSockets = existing.activeSockets || new Set();
+    existing.activeSockets.add(socket.id);
+    existing.active = true;
     online.set(userId, existing);
     socket.join(`user:${userId}`);
     io.emit('presence:update', onlinePayload());
@@ -144,7 +154,7 @@ function registerSocket(io) {
       if (!message.ok) return ack?.({ error: message.message });
       const reply = replyPreview(replyTo, 'room', userId);
       const result = q.insertMessage.run(id, userId, message.value, file.value.url, file.value.type, file.value.name, reply.id, reply.author, reply.body, null, null);
-      const saved = q.findMessageById.get(result.lastInsertRowid);
+      const saved = decorateMessage(q.findMessageById.get(result.lastInsertRowid), 'room', userId);
       io.to(`room:${id}`).emit('message:new', saved);
       notifyMentions(io, socket.user, message.value, { type: 'room', id });
       notifyRoomPushes(socket.user, id, room.name, saved);
@@ -161,9 +171,9 @@ function registerSocket(io) {
       if (!message.ok) return ack?.({ error: message.message });
       const reply = replyPreview(replyTo, 'private', userId);
       const result = q.insertPrivateMessage.run(userId, targetId, message.value, file.value.url, file.value.type, file.value.name, reply.id, reply.author, reply.body, null, null);
-      const saved = q.findPrivateMessageById.get(result.lastInsertRowid);
+      const saved = decorateMessage(q.findPrivateMessageById.get(result.lastInsertRowid), 'private', userId);
       emitPrivate(io, userId, targetId, saved);
-      if (!q.findMutedChat.get(targetId, 'user', userId)) {
+      if (!q.findMutedChat.get(targetId, 'user', userId) && !isUserActive(targetId)) {
         io.to(`user:${targetId}`).emit('notification:new', { title: `Сообщение от ${socket.user.username}`, body: message.value.slice(0, 120), chat: { type: 'private', id: userId } });
       }
       if (!q.findMutedChat.get(targetId, 'user', userId)) {
@@ -177,6 +187,41 @@ function registerSocket(io) {
       }
       notifyMentions(io, socket.user, message.value, { type: 'private', id: userId });
       return ack?.({ ok: true, message: saved });
+    });
+
+    socket.on('app:active', ({ active } = {}) => {
+      const entry = online.get(userId);
+      if (!entry) return;
+      entry.activeSockets = entry.activeSockets || new Set();
+      if (active === false) entry.activeSockets.delete(socket.id);
+      else entry.activeSockets.add(socket.id);
+      entry.active = entry.activeSockets.size > 0;
+    });
+
+    socket.on('message:react', ({ chatType, messageId, reaction }, ack) => {
+      const type = chatType === 'room' ? 'room' : chatType === 'private' ? 'private' : null;
+      const id = Number(messageId);
+      if (!type || !id || !allowedReactions.has(reaction)) return ack?.({ error: 'Некорректная реакция.' });
+
+      if (type === 'room') {
+        const message = q.findMessageById.get(id);
+        if (!message || !canAccessRoom(message.room_id, userId)) return ack?.({ error: 'Сообщение не найдено.' });
+        const current = q.findMessageReaction.get(userId, type, id)?.reaction;
+        if (current === reaction) q.deleteMessageReaction.run(userId, type, id);
+        else q.upsertMessageReaction.run(userId, type, id, reaction);
+        const payload = { chatType: type, messageId: id, roomId: message.room_id, actorId: userId, ...reactionPayload(type, id) };
+        io.to(`room:${message.room_id}`).emit('message:reaction', payload);
+        return ack?.({ ok: true, chatType: type, messageId: id, ...reactionPayload(type, id, userId) });
+      }
+
+      const message = q.findPrivateMessageById.get(id);
+      if (!message || (message.sender_id !== userId && message.receiver_id !== userId)) return ack?.({ error: 'Сообщение не найдено.' });
+      const current = q.findMessageReaction.get(userId, type, id)?.reaction;
+      if (current === reaction) q.deleteMessageReaction.run(userId, type, id);
+      else q.upsertMessageReaction.run(userId, type, id, reaction);
+      const payload = { chatType: type, messageId: id, actorId: userId, ...reactionPayload(type, id) };
+      io.to(`user:${message.sender_id}`).to(`user:${message.receiver_id}`).emit('message:reaction', payload);
+      return ack?.({ ok: true, chatType: type, messageId: id, ...reactionPayload(type, id, userId) });
     });
 
     socket.on('private:read', ({ userId: otherUserId }, ack) => {
@@ -271,6 +316,8 @@ function registerSocket(io) {
       const entry = online.get(userId);
       if (entry) {
         entry.sockets.delete(socket.id);
+        entry.activeSockets?.delete(socket.id);
+        entry.active = Boolean(entry.activeSockets?.size);
         if (!entry.sockets.size) online.delete(userId);
       }
       io.emit('presence:update', onlinePayload());

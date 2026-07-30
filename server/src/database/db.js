@@ -100,6 +100,16 @@ function initDb() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS message_reactions (
+      user_id INTEGER NOT NULL,
+      message_type TEXT NOT NULL CHECK (message_type IN ('room', 'private')),
+      message_id INTEGER NOT NULL,
+      reaction TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, message_type, message_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS muted_chats (
       user_id INTEGER NOT NULL,
       target_type TEXT NOT NULL CHECK (target_type IN ('room', 'user')),

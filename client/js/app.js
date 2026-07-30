@@ -87,6 +87,7 @@ let toastTimer = null;
 function setAppHeight() {
   const height = window.visualViewport?.height || window.innerHeight;
   document.documentElement.style.setProperty('--app-height', `${Math.round(height)}px`);
+  document.body.classList.toggle('keyboard-open', Boolean(window.visualViewport && window.visualViewport.height < window.innerHeight - 90));
 }
 
 setAppHeight();
@@ -100,14 +101,25 @@ function markCurrentPrivateRead() {
   }
 }
 
+function sendActiveState() {
+  const active = !document.hidden;
+  state.socket?.emit('app:active', { active });
+}
+
 function setConnectionStatus(status) {
-  if (el.status) el.status.textContent = status;
+  if (state.chat.type === 'private') updateHeaderStatus();
+  else if (el.status) el.status.textContent = status;
   document.body.dataset.connection = status;
 }
 
-window.addEventListener('focus', markCurrentPrivateRead);
+window.addEventListener('focus', () => {
+  markCurrentPrivateRead();
+  sendActiveState();
+});
+window.addEventListener('blur', sendActiveState);
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) markCurrentPrivateRead();
+  sendActiveState();
 });
 
 async function api(path, options = {}) {
@@ -213,6 +225,30 @@ async function showChangelogIfNeeded() {
 
 setupPeoplePanel();
 
+function getDefaultReaction() {
+  const value = localStorage.getItem('nexus:defaultReaction') || 'heart';
+  return reactionIcons[value] ? value : 'heart';
+}
+
+function setupDefaultReactionSetting() {
+  if (!el.settingsModal || document.querySelector('#defaultReactionSelect')) return;
+  const label = document.createElement('label');
+  label.className = 'settings-field';
+  label.innerHTML = `
+    <span>Реакция по двойному клику</span>
+    <select id="defaultReactionSelect">
+      ${Object.entries(reactionIcons).map(([key, icon]) => `<option value="${key}">${icon}</option>`).join('')}
+    </select>
+  `;
+  const closeButton = document.querySelector('#closeSettings');
+  closeButton?.before(label);
+  const select = label.querySelector('select');
+  select.value = getDefaultReaction();
+  select.addEventListener('change', () => localStorage.setItem('nexus:defaultReaction', select.value));
+}
+
+setupDefaultReactionSetting();
+
 function avatar(entity, size = '') {
   const cls = `avatar ${size}`;
   const base = displayName(entity).slice(0, 2).toUpperCase();
@@ -243,6 +279,18 @@ function currentItem() {
 
 function currentChatMuted() {
   return Boolean(currentItem()?.muted);
+}
+
+function saveLastChat(type, id) {
+  if (type && id) localStorage.setItem('nexus:lastChat', `${type}:${id}`);
+}
+
+function findLastChat() {
+  const [type, rawId] = String(localStorage.getItem('nexus:lastChat') || '').split(':');
+  const id = Number(rawId);
+  if (type === 'room') return { type, item: state.rooms.find((room) => room.id === id) };
+  if (type === 'private') return { type, item: state.users.find((user) => user.id === id) };
+  return null;
 }
 
 function renderInspectorMembers(users = []) {
@@ -300,7 +348,12 @@ function setSidebarMode(mode) {
   document.querySelectorAll('[data-rail-action]').forEach((item) => {
     item.classList.toggle('active', item.dataset.railAction === mode);
   });
-  el.sidebar.classList.toggle('open', innerWidth < 760);
+  setSidebarOpen(innerWidth < 760);
+}
+
+function setSidebarOpen(open) {
+  el.sidebar.classList.toggle('open', open);
+  document.body.classList.toggle('sidebar-open', open);
 }
 
 function renderPeopleSearchResults(users) {
@@ -322,6 +375,22 @@ function renderPeopleSearchResults(users) {
 
 function bodyHtml(body) {
   return escapeHtml(body).replace(/@([a-z0-9_]{3,32})/gi, '<mark>@$1</mark>');
+}
+
+const reactionIcons = { heart: '♥', like: '👍', fire: '🔥', cry: '😢', angry: '😡', dislike: '👎' };
+
+function reactionsHtml(message) {
+  const counts = message.reactions || {};
+  return `
+    <div class="reactions" data-reactions>
+      ${Object.entries(reactionIcons).map(([key, icon]) => `
+        <button class="reaction-button ${message.my_reaction === key ? 'active' : ''}" type="button" data-react="${key}">
+          <span>${icon}</span>
+          <b>${counts[key] || ''}</b>
+        </button>
+      `).join('')}
+    </div>
+  `;
 }
 
 function attachmentHtml(message) {
@@ -373,6 +442,7 @@ function renderMessage(message, type = state.chat.type) {
         ${message.forwarded_from_author ? `<div class="reply-preview">Переслано от ${escapeHtml(message.forwarded_from_author)}: ${escapeHtml(message.forwarded_from_body)}</div>` : ''}
         ${message.body ? `<p>${bodyHtml(message.body)}</p>` : ''}
         ${attachmentHtml(message)}
+        ${reactionsHtml(message)}
       </div>
     </article>
   `;
@@ -381,6 +451,29 @@ function renderMessage(message, type = state.chat.type) {
 function addMessage(message, type) {
   el.messages.insertAdjacentHTML('beforeend', renderMessage(message, type));
   el.messages.scrollTop = el.messages.scrollHeight;
+}
+
+function updateMessageReactions(event) {
+  const message = document.querySelector(`[data-message-type="${event.chatType}"][data-message-id="${event.messageId}"]`);
+  const holder = message?.querySelector('[data-reactions]');
+  if (!holder) return;
+  holder.querySelectorAll('[data-react]').forEach((button) => {
+    const key = button.dataset.react;
+    if (Object.prototype.hasOwnProperty.call(event, 'my_reaction')) button.classList.toggle('active', event.my_reaction === key);
+    button.querySelector('b').textContent = event.reactions?.[key] || '';
+  });
+}
+
+function reactToMessage(message, reaction = getDefaultReaction()) {
+  if (!message || !state.socket?.connected) return;
+  state.socket.emit('message:react', {
+    chatType: message.dataset.messageType,
+    messageId: Number(message.dataset.messageId),
+    reaction
+  }, (ack) => {
+    if (ack?.error) toast(ack.error);
+    else if (ack?.ok) updateMessageReactions(ack);
+  });
 }
 
 function ensurePrivateUser(message) {
@@ -453,6 +546,19 @@ function setHeader() {
   }
 }
 
+function updateHeaderStatus() {
+  if (!el.status) return;
+  if (!state.socket?.connected) {
+    el.status.textContent = 'offline';
+    return;
+  }
+  if (state.chat.type === 'private') {
+    el.status.textContent = state.onlineIds.has(state.chat.id) ? 'online' : 'offline';
+    return;
+  }
+  el.status.textContent = state.socket?.connected ? 'online' : 'offline';
+}
+
 function showEmptyChat() {
   state.chat = { type: 'empty', id: null, title: '' };
   state.replyTo = null;
@@ -471,6 +577,7 @@ function showEmptyChat() {
 
 async function openRoom(room) {
   if (!room) return showEmptyChat();
+  saveLastChat('room', room.id);
   if (state.chat.type === 'room' && state.socket) state.socket.emit('room:leave', { roomId: state.chat.id });
   state.chat = { type: 'room', id: room.id, title: room.name };
   renderTyping();
@@ -478,6 +585,7 @@ async function openRoom(room) {
   state.unread.delete(chatKey('room', room.id));
   updateReplyBar();
   setHeader();
+  updateHeaderStatus();
   renderLists();
   const data = await api(`/api/rooms/${room.id}/messages`);
   el.messages.innerHTML = data.messages.map((msg) => renderMessage(msg, 'room')).join('');
@@ -493,12 +601,14 @@ async function openRoom(room) {
 
 async function openPrivate(user) {
   if (!user) return;
+  saveLastChat('private', user.id);
   state.chat = { type: 'private', id: user.id, title: user.username };
   renderTyping();
   state.replyTo = null;
   state.unread.delete(chatKey('private', user.id));
   updateReplyBar();
   setHeader();
+  updateHeaderStatus();
   renderLists();
   state.socket?.emit('private:read', { userId: user.id });
   const data = await api(`/api/private/${user.id}/messages`);
@@ -661,6 +771,7 @@ function setupSocket() {
   state.socket = io({ path: '/socket.io' });
   state.socket.on('connect', () => {
     setConnectionStatus('online');
+    sendActiveState();
     if (state.chat.type === 'room') state.socket.emit('room:join', { roomId: state.chat.id });
     if (state.chat.type === 'private') markCurrentPrivateRead();
   });
@@ -668,6 +779,7 @@ function setupSocket() {
   state.socket.on('connect_error', (error) => toast(error.message));
   state.socket.on('presence:update', (users) => {
     state.onlineIds = new Set(users.map((user) => user.id));
+    updateHeaderStatus();
     renderLists();
   });
   state.socket.on('room:created', (room) => {
@@ -727,6 +839,7 @@ function setupSocket() {
   });
   state.socket.on('message:removed', (event) => removeMessage(event.messageId, event.chatType));
   state.socket.on('message:deleted', (event) => removeMessage(event.message?.id, event.chatType));
+  state.socket.on('message:reaction', updateMessageReactions);
   state.socket.on('typing:update', (event) => {
     const scopedChatKey = eventTypingKey(event);
     const key = `${scopedChatKey}:${event.fromUserId || event.user.id}`;
@@ -780,7 +893,7 @@ document.addEventListener('click', async (event) => {
   const userButton = event.target.closest('[data-user]');
   if (roomButton) await openRoom(state.rooms.find((room) => room.id === Number(roomButton.dataset.room)));
   if (userButton) await openPrivate(state.users.find((user) => user.id === Number(userButton.dataset.user)));
-  if (innerWidth < 760 && (roomButton || userButton)) el.sidebar.classList.remove('open');
+  if (innerWidth < 760 && (roomButton || userButton)) setSidebarOpen(false);
 });
 
 el.messages.addEventListener('contextmenu', (event) => {
@@ -788,6 +901,13 @@ el.messages.addEventListener('contextmenu', (event) => {
   if (!message) return;
   event.preventDefault();
   openContextMenu(message, event.clientX, event.clientY);
+});
+el.messages.addEventListener('dblclick', (event) => {
+  if (event.target.closest('[data-react], .media-player, .message-action, [data-player-progress]')) return;
+  const message = event.target.closest('[data-message-id]');
+  if (!message) return;
+  event.preventDefault();
+  reactToMessage(message, getDefaultReaction());
 });
 el.messages.addEventListener('touchstart', (event) => {
   const message = event.target.closest('[data-message-id]');
@@ -817,6 +937,13 @@ function updateMediaPlayer(player) {
 }
 
 el.messages.addEventListener('click', async (event) => {
+  const reactionButton = event.target.closest('[data-react]');
+  if (reactionButton) {
+    const message = reactionButton.closest('[data-message-id]');
+    event.preventDefault();
+    reactToMessage(message, reactionButton.dataset.react);
+    return;
+  }
   const playButton = event.target.closest('[data-player-toggle]');
   const circlePlayer = event.target.closest('.video-circle-player');
   if (!playButton && !circlePlayer) return;
@@ -1307,6 +1434,7 @@ el.chatHeaderButton.onclick = async () => {
   if (!item) return;
   document.querySelector('#roomSettingsModal h2').textContent = state.chat.type === 'room' ? `# ${item.name}` : displayName(item);
   el.roomAvatarPreview.innerHTML = avatar(item, 'large');
+  el.roomAvatarInput.value = '';
   const canInvite = state.chat.type === 'room' && item.role === 'admin';
   document.querySelector('#inviteButton').hidden = !canInvite;
   el.inviteSearch.hidden = !canInvite;
@@ -1370,6 +1498,17 @@ document.querySelector('#deleteRoomButton').onclick = async () => {
   await api(`/api/rooms/${state.chat.id}`, { method: 'DELETE' });
   el.roomSettingsModal.close();
 };
+el.roomAvatarInput.addEventListener('change', () => {
+  const file = el.roomAvatarInput.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/') && !/\.(jpe?g|png|webp|gif)$/i.test(file.name)) {
+    el.roomAvatarInput.value = '';
+    toast('Для аватарки комнаты выберите изображение.');
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  el.roomAvatarPreview.innerHTML = `<span class="avatar large"><img src="${url}" alt=""></span>`;
+});
 el.roomSettingsForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (state.chat.type !== 'room' || !el.roomAvatarInput.files[0]) return el.roomSettingsModal.close();
@@ -1400,10 +1539,22 @@ document.querySelector('#logoutButton').onclick = async () => {
 document.querySelector('#profileButton').onclick = () => {
   document.querySelector('#profileForm').display_name.value = state.me.display_name || '';
   document.querySelector('#profileForm').username.value = state.me.username;
+  document.querySelector('#avatarInput').value = '';
   document.querySelector('#profileAvatar').innerHTML = avatar(state.me, 'large');
   document.querySelector('#profileModal').showModal();
 };
 document.querySelector('#closeProfile').onclick = () => document.querySelector('#profileModal').close();
+document.querySelector('#avatarInput').addEventListener('change', () => {
+  const file = document.querySelector('#avatarInput').files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/') && !/\.(jpe?g|png|webp|gif)$/i.test(file.name)) {
+    document.querySelector('#avatarInput').value = '';
+    toast('Для аватарки выберите изображение.');
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  document.querySelector('#profileAvatar').innerHTML = `<span class="avatar large"><img src="${url}" alt=""></span>`;
+});
 document.querySelector('#profileForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   try {
@@ -1415,13 +1566,16 @@ document.querySelector('#profileForm').addEventListener('submit', async (event) 
       body: JSON.stringify({ display_name: form.display_name.value, username: form.username.value, avatar_url: avatarUrl })
     });
     state.me = data.user;
+    if (avatarUrl) state.me.avatar_url = avatarUrl;
+    state.users = state.users.map((user) => user.id === state.me.id ? { ...user, ...state.me } : user);
     document.querySelector('#profileButton').innerHTML = `${avatar(state.me, 'small')}<span>${escapeHtml(displayName(state.me))}</span>`;
+    renderLists();
     document.querySelector('#profileModal').close();
     toast('Профиль обновлён.');
   } catch (error) { toast(error.message); }
 });
-document.querySelector('#openSidebar').onclick = () => el.sidebar.classList.add('open');
-document.querySelector('#closeSidebar').onclick = () => el.sidebar.classList.remove('open');
+document.querySelector('#openSidebar').onclick = () => setSidebarOpen(true);
+document.querySelector('#closeSidebar').onclick = () => setSidebarOpen(false);
 
 (async function boot() {
   try {
@@ -1431,8 +1585,14 @@ document.querySelector('#closeSidebar').onclick = () => el.sidebar.classList.rem
     document.querySelector('#profileButton').innerHTML = `${avatar(state.me, 'small')}<span>${escapeHtml(displayName(state.me))}</span>`;
     await refreshData();
     setupSocket();
-    await openRoom(state.rooms[0]);
-    setSidebarMode('rooms');
+    const lastChat = findLastChat();
+    if (lastChat?.type === 'private' && lastChat.item) {
+      await openPrivate(lastChat.item);
+      setSidebarMode('chats');
+    } else {
+      await openRoom(lastChat?.item || state.rooms[0]);
+      setSidebarMode('rooms');
+    }
     if (!state.me.display_name) document.querySelector('#profileButton').click();
     el.loadingScreen.classList.add('done');
     showChangelogIfNeeded();

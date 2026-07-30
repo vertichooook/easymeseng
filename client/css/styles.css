@@ -147,6 +147,7 @@ textarea:focus {
 .sidebar {
   min-width: 0;
   min-height: 0;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   color: #edf4f4;
@@ -277,10 +278,13 @@ textarea:focus {
 .list {
   display: grid;
   gap: 6px;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .list-item {
   width: 100%;
+  min-width: 0;
   min-height: 54px;
   padding: 8px 10px;
   display: flex;
@@ -292,6 +296,13 @@ textarea:focus {
   background: transparent;
   border-radius: 16px;
   border: 1px solid transparent;
+}
+
+.list-item span:not(.avatar) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .list-item:hover {
@@ -310,6 +321,10 @@ textarea:focus {
 
 .list-item small {
   margin-left: auto;
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: rgb(237 244 244 / 0.56);
   font-size: 12px;
   white-space: nowrap;
@@ -537,6 +552,39 @@ img.avatar {
 }
 
 .message-status.read { color: var(--accent-3); }
+
+.reactions {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.reaction-button {
+  min-width: 34px;
+  height: 28px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel-2) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+}
+
+.reaction-button:hover,
+.reaction-button.active {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+}
+
+.reaction-button b {
+  min-width: 8px;
+  font-size: 12px;
+}
 
 .message-action {
   padding: 0 2px;
@@ -983,6 +1031,20 @@ dialog[open] { animation: modalIn 0.16s ease both; }
 
 .check-row input { width: auto; }
 .muted-text { margin: 0; color: var(--muted); }
+
+.settings-field {
+  display: grid;
+  gap: 7px;
+}
+
+.settings-field select {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 8px 10px;
+  color: var(--text);
+  background: var(--panel-2);
+}
 
 .members-list,
 .search-results {
@@ -1609,6 +1671,8 @@ dialog[open] { animation: modalIn 0.16s ease both; }
 .sidebar .panel-section:not([hidden]) {
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -1878,6 +1942,16 @@ dialog[open] { animation: modalIn 0.16s ease both; }
     justify-content: center;
     background: color-mix(in srgb, var(--sidebar) 94%, transparent);
     border-top: 1px solid rgb(255 255 255 / 0.10);
+  }
+
+  body.sidebar-open .nav-rail,
+  body.keyboard-open .nav-rail {
+    display: none;
+  }
+
+  body.keyboard-open .chat,
+  body.sidebar-open .chat {
+    height: var(--app-height);
   }
 
   .nav-rail .logo-mark {

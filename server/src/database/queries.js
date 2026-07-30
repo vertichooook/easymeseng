@@ -137,6 +137,22 @@ module.exports = {
   listUnreadPrivateMessageIds: db.prepare('SELECT id FROM private_messages WHERE sender_id = ? AND receiver_id = ? AND read_at IS NULL AND deleted_at IS NULL'),
   markPrivateMessagesRead: db.prepare("UPDATE private_messages SET read_at = datetime('now') WHERE sender_id = ? AND receiver_id = ? AND read_at IS NULL"),
   hideMessageForUser: db.prepare('INSERT OR IGNORE INTO hidden_messages (user_id, message_type, message_id) VALUES (?, ?, ?)'),
+  findMessageReaction: db.prepare('SELECT reaction FROM message_reactions WHERE user_id = ? AND message_type = ? AND message_id = ?'),
+  upsertMessageReaction: db.prepare(`
+    INSERT INTO message_reactions (user_id, message_type, message_id, reaction)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(user_id, message_type, message_id) DO UPDATE SET
+      reaction = excluded.reaction,
+      created_at = datetime('now')
+  `),
+  deleteMessageReaction: db.prepare('DELETE FROM message_reactions WHERE user_id = ? AND message_type = ? AND message_id = ?'),
+  listMessageReactions: db.prepare(`
+    SELECT reaction, COUNT(*) AS count
+    FROM message_reactions
+    WHERE message_type = ? AND message_id = ?
+    GROUP BY reaction
+  `),
+  findMyMessageReaction: db.prepare('SELECT reaction FROM message_reactions WHERE user_id = ? AND message_type = ? AND message_id = ?'),
   muteChat: db.prepare('INSERT OR IGNORE INTO muted_chats (user_id, target_type, target_id) VALUES (?, ?, ?)'),
   unmuteChat: db.prepare('DELETE FROM muted_chats WHERE user_id = ? AND target_type = ? AND target_id = ?'),
   findMutedChat: db.prepare('SELECT 1 FROM muted_chats WHERE user_id = ? AND target_type = ? AND target_id = ?'),
