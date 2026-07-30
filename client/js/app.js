@@ -215,8 +215,10 @@ setupPeoplePanel();
 
 function avatar(entity, size = '') {
   const cls = `avatar ${size}`;
-  if (entity?.avatar_url) return `<img class="${cls}" src="${escapeHtml(entity.avatar_url)}" alt="">`;
   const base = displayName(entity).slice(0, 2).toUpperCase();
+  if (entity?.avatar_url) {
+    return `<span class="${cls}"><img src="${escapeHtml(entity.avatar_url)}" alt="" onerror="this.remove();this.parentElement.textContent='${escapeHtml(base)}';"></span>`;
+  }
   return `<span class="${cls}">${escapeHtml(base)}</span>`;
 }
 
