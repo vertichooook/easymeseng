@@ -1605,6 +1605,13 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   border-bottom: 1px solid var(--line);
 }
 
+.sidebar .panel-section:not([hidden]) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .sidebar [hidden] {
   display: none !important;
 }
@@ -1628,6 +1635,45 @@ dialog[open] { animation: modalIn 0.16s ease both; }
 
 .sidebar .list-item small {
   color: var(--muted);
+}
+
+.rooms-panel .list,
+.users-section .list,
+.people-contacts,
+.people-results {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.rooms-panel .list,
+.users-section .list {
+  flex: 1 1 auto;
+}
+
+.people-section {
+  gap: 12px;
+}
+
+.people-block {
+  min-height: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.people-search-block {
+  flex: 0 0 auto;
+}
+
+.people-saved-block {
+  flex: 1 1 auto;
+  align-content: start;
+}
+
+.subsection-title {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
 }
 
 .people-search {
@@ -1654,7 +1700,49 @@ dialog[open] { animation: modalIn 0.16s ease both; }
 }
 
 .profile-mini {
+  margin-top: auto;
   border-top: 1px solid var(--line);
+}
+
+.changelog-modal {
+  gap: 18px;
+}
+
+.changelog-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.changelog-head h2 {
+  margin: 0;
+}
+
+.changelog-items {
+  display: grid;
+  gap: 10px;
+}
+
+.changelog-item {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  border-radius: 16px;
+  background: var(--panel-2);
+}
+
+.changelog-item span {
+  width: 9px;
+  height: 9px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.changelog-item p {
+  margin: 0;
+  color: var(--text);
 }
 
 .profile-mini button:first-child {

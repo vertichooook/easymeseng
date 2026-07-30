@@ -144,6 +144,75 @@ function setupCameraModeButton() {
 
 setupCameraModeButton();
 
+function setupPeoplePanel() {
+  const peoplePanel = document.querySelector('[data-sidebar-panel="people"]');
+  const searchLabel = document.querySelector('.people-search');
+  if (!peoplePanel || !searchLabel || !el.peopleSearchResults || !el.peopleContactsList || peoplePanel.querySelector('.people-search-block')) return;
+
+  const searchBlock = document.createElement('div');
+  searchBlock.className = 'people-block people-search-block';
+  searchLabel.before(searchBlock);
+  searchBlock.append(searchLabel, el.peopleSearchResults);
+
+  const savedBlock = document.createElement('div');
+  savedBlock.className = 'people-block people-saved-block';
+  savedBlock.innerHTML = '<div class="subsection-title">Сохраненные контакты</div>';
+  savedBlock.append(el.peopleContactsList);
+  peoplePanel.append(savedBlock);
+}
+
+function ensureChangelogModal() {
+  let modal = document.querySelector('#changelogModal');
+  if (modal) return modal;
+  modal = document.createElement('dialog');
+  modal.id = 'changelogModal';
+  modal.innerHTML = `
+    <div class="modal-form changelog-modal">
+      <div class="changelog-head">
+        <span class="logo-mark">N</span>
+        <div>
+          <h2>Что нового в Nexus</h2>
+          <p id="changelogVersion" class="muted-text"></p>
+        </div>
+      </div>
+      <div id="changelogItems" class="changelog-items"></div>
+      <button id="closeChangelog" type="button">Понятно</button>
+    </div>
+  `;
+  document.body.append(modal);
+  return modal;
+}
+
+async function showChangelogIfNeeded() {
+  const changelog = (await import(`/js/changelog.js?v=${Date.now()}`).catch(() => null))?.default;
+  if (!changelog?.version) return;
+  const key = 'nexus:lastSeenChangelogVersion';
+  if (localStorage.getItem(key) === changelog.version) return;
+  if (document.querySelector('dialog[open]:not(#changelogModal)')) {
+    setTimeout(showChangelogIfNeeded, 600);
+    return;
+  }
+
+  const modal = ensureChangelogModal();
+  modal.querySelector('#changelogVersion').textContent = `Версия ${changelog.version}`;
+  modal.querySelector('#changelogItems').innerHTML = (changelog.items || []).map((item) => `
+    <div class="changelog-item">
+      <span></span>
+      <p>${escapeHtml(item)}</p>
+    </div>
+  `).join('');
+
+  const close = () => {
+    localStorage.setItem(key, changelog.version);
+    modal.close();
+  };
+  modal.querySelector('#closeChangelog').onclick = close;
+  modal.addEventListener('cancel', () => localStorage.setItem(key, changelog.version), { once: true });
+  modal.showModal();
+}
+
+setupPeoplePanel();
+
 function avatar(entity, size = '') {
   const cls = `avatar ${size}`;
   if (entity?.avatar_url) return `<img class="${cls}" src="${escapeHtml(entity.avatar_url)}" alt="">`;
@@ -225,6 +294,10 @@ function setSidebarMode(mode) {
 
 function renderPeopleSearchResults(users) {
   if (!el.peopleSearchResults) return;
+  if (!String(el.peopleSearchInput?.value || '').trim()) {
+    el.peopleSearchResults.innerHTML = '<p class="muted-text">Введите username, чтобы найти пользователя.</p>';
+    return;
+  }
   el.peopleSearchResults.innerHTML = users.length
     ? users.map((user) => `
       <button class="list-item" type="button" data-people-user="${user.id}">
@@ -1170,6 +1243,10 @@ function renderUserSearchResults(users) {
 
 let peopleSearchTimer = null;
 async function runPeopleSearch() {
+  if (!String(el.peopleSearchInput.value || '').trim()) {
+    renderPeopleSearchResults([]);
+    return;
+  }
   renderPeopleSearchResults(await searchUsers(el.peopleSearchInput.value));
 }
 
@@ -1347,6 +1424,7 @@ document.querySelector('#closeSidebar').onclick = () => el.sidebar.classList.rem
     setSidebarMode('rooms');
     if (!state.me.display_name) document.querySelector('#profileButton').click();
     el.loadingScreen.classList.add('done');
+    showChangelogIfNeeded();
   } catch (_error) {
     location.href = '/login.html';
   }

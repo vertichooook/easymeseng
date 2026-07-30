@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nexus-shell-v2';
+const CACHE_NAME = 'nexus-shell-v4';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -6,6 +6,7 @@ const SHELL_ASSETS = [
   '/register.html',
   '/css/styles.css',
   '/js/app.js',
+  '/js/changelog.js',
   '/js/auth.js',
   '/js/pwa.js',
   '/manifest.webmanifest',
@@ -32,6 +33,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET' || url.origin !== location.origin) return;
+  if (url.pathname === '/js/changelog.js') return;
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/socket.io/') || url.pathname.startsWith('/uploads/')) return;
 
   event.respondWith(
