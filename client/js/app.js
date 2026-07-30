@@ -1487,52 +1487,54 @@ document.querySelector('#copyUsernameButton').onclick = async () => {
   toast('Username скопирован.');
 };
 
-document.querySelector('#adminOpenButton').onclick = async () => {
-  el.adminModal.showModal();
-  try {
-    await loadAdminCodes();
-  } catch (_error) {
-    el.adminLoginForm.hidden = false;
-    el.adminWorkspace.hidden = true;
-  }
-};
-document.querySelector('#adminCloseButton').onclick = () => el.adminModal.close();
-el.adminLoginForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const password = new FormData(el.adminLoginForm).get('password');
-  try {
-    await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ password }) });
-    el.adminLoginForm.reset();
-    await loadAdminCodes();
-    toast('Вход администратора выполнен.');
-  } catch (error) {
-    toast(error.message);
-  }
-});
-document.querySelector('#adminRefreshButton').onclick = () => loadAdminCodes().catch((error) => toast(error.message));
-document.querySelector('#adminAddCodeButton').onclick = async () => {
-  try {
-    const data = await api('/api/admin/codes', { method: 'POST', body: JSON.stringify({}) });
-    el.newRegistrationCode.value = data.code;
-    el.registrationCodeModal.showModal();
-  } catch (error) {
-    toast(error.message);
-  }
-};
-document.querySelector('#copyRegistrationCodeButton').onclick = async () => {
-  await navigator.clipboard.writeText(el.newRegistrationCode.value);
-  toast('Код скопирован.');
-};
-document.querySelector('#closeRegistrationCodeButton').onclick = async () => {
-  el.registrationCodeModal.close();
-  await loadAdminCodes().catch((error) => toast(error.message));
-};
-el.adminCodesList.addEventListener('click', async (event) => {
-  const button = event.target.closest('[data-copy-code]');
-  if (!button) return;
-  await navigator.clipboard.writeText(button.dataset.copyCode);
-  toast('Код скопирован.');
-});
+if (el.adminModal && el.adminLoginForm && el.adminWorkspace && el.adminCodesList) {
+  document.querySelector('#adminOpenButton')?.addEventListener('click', async () => {
+    el.adminModal.showModal();
+    try {
+      await loadAdminCodes();
+    } catch (_error) {
+      el.adminLoginForm.hidden = false;
+      el.adminWorkspace.hidden = true;
+    }
+  });
+  document.querySelector('#adminCloseButton')?.addEventListener('click', () => el.adminModal.close());
+  el.adminLoginForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const password = new FormData(el.adminLoginForm).get('password');
+    try {
+      await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ password }) });
+      el.adminLoginForm.reset();
+      await loadAdminCodes();
+      toast('OK');
+    } catch (error) {
+      toast(error.message);
+    }
+  });
+  document.querySelector('#adminRefreshButton')?.addEventListener('click', () => loadAdminCodes().catch((error) => toast(error.message)));
+  document.querySelector('#adminAddCodeButton')?.addEventListener('click', async () => {
+    try {
+      const data = await api('/api/admin/codes', { method: 'POST', body: JSON.stringify({}) });
+      if (el.newRegistrationCode) el.newRegistrationCode.value = data.code;
+      el.registrationCodeModal?.showModal();
+    } catch (error) {
+      toast(error.message);
+    }
+  });
+  document.querySelector('#copyRegistrationCodeButton')?.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(el.newRegistrationCode?.value || '');
+    toast('OK');
+  });
+  document.querySelector('#closeRegistrationCodeButton')?.addEventListener('click', async () => {
+    el.registrationCodeModal?.close();
+    await loadAdminCodes().catch((error) => toast(error.message));
+  });
+  el.adminCodesList.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-copy-code]');
+    if (!button) return;
+    await navigator.clipboard.writeText(button.dataset.copyCode);
+    toast('OK');
+  });
+}
 
 document.querySelectorAll('[data-rail-action]').forEach((button) => {
   button.addEventListener('click', () => {
