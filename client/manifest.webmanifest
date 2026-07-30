@@ -1,0 +1,28 @@
+{
+  "name": "Nexus Messenger",
+  "short_name": "Nexus",
+  "description": "Private rooms, direct chats and media messages.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "any",
+  "background_color": "#17202a",
+  "theme_color": "#17202a",
+  "categories": ["social", "communication"],
+  "icons": [
+    {
+      "src": "/icons/nexus-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/nexus-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

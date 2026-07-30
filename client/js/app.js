@@ -548,9 +548,10 @@ function bumpUnread(type, id, mentioned = false) {
   if (mentioned) toast('Вас упомянули.');
 }
 
-function showDeviceNotification(title, body, muted = false) {
+async function showDeviceNotification(title, body, muted = false) {
   if (muted || !('Notification' in window) || Notification.permission !== 'granted' || document.hasFocus()) return;
-  new Notification(title, { body });
+  const shown = await window.nexusPwa?.showNotification(title, { body, data: { url: '/' } }).catch(() => false);
+  if (!shown) new Notification(title, { body });
 }
 
 async function resolveForwardTargets(input) {
