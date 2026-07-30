@@ -90,17 +90,42 @@ const mediaSrc = (url) => {
   return value;
 };
 let toastTimer = null;
+let keyboardOpen = false;
+let scrollLatestTimer = null;
+
+function scrollToLatest(behavior = 'auto') {
+  if (!el.messages) return;
+  el.messages.scrollTo({ top: el.messages.scrollHeight, behavior });
+}
+
+function scheduleScrollToLatest() {
+  clearTimeout(scrollLatestTimer);
+  requestAnimationFrame(() => scrollToLatest());
+  scrollLatestTimer = setTimeout(() => scrollToLatest(), 180);
+}
 
 function setAppHeight() {
   const height = window.visualViewport?.height || window.innerHeight;
+  const nextKeyboardOpen = Boolean(window.visualViewport && window.visualViewport.height < window.innerHeight - 90);
   document.documentElement.style.setProperty('--app-height', `${Math.round(height)}px`);
-  document.body.classList.toggle('keyboard-open', Boolean(window.visualViewport && window.visualViewport.height < window.innerHeight - 90));
+  document.body.classList.toggle('keyboard-open', nextKeyboardOpen);
+  if (nextKeyboardOpen && (!keyboardOpen || document.activeElement === el.input)) {
+    window.scrollTo(0, 0);
+    scheduleScrollToLatest();
+  }
+  keyboardOpen = nextKeyboardOpen;
 }
 
 setAppHeight();
 window.addEventListener('resize', setAppHeight);
 window.addEventListener('orientationchange', setAppHeight);
 window.visualViewport?.addEventListener('resize', setAppHeight);
+window.visualViewport?.addEventListener('scroll', setAppHeight);
+el.input.addEventListener('focus', () => {
+  document.body.classList.add('keyboard-open');
+  keyboardOpen = true;
+  scheduleScrollToLatest();
+});
 
 function markCurrentPrivateRead() {
   if (state.chat.type === 'private' && state.socket?.connected) {
@@ -500,7 +525,7 @@ function renderMessage(message, type = state.chat.type) {
 
 function addMessage(message, type) {
   el.messages.insertAdjacentHTML('beforeend', renderMessage(message, type));
-  el.messages.scrollTop = el.messages.scrollHeight;
+  scrollToLatest('smooth');
 }
 
 function updateMessageReactions(event) {
@@ -649,7 +674,7 @@ async function openRoom(room) {
     renderInspectorMembers([]);
   }
   state.socket?.emit('room:join', { roomId: room.id }, (ack) => ack?.error && toast(ack.error));
-  el.messages.scrollTop = el.messages.scrollHeight;
+  scheduleScrollToLatest();
 }
 
 async function openPrivate(user) {
@@ -667,7 +692,7 @@ async function openPrivate(user) {
   const data = await api(`/api/private/${user.id}/messages`);
   el.messages.innerHTML = data.messages.map((msg) => renderMessage(msg, 'private')).join('');
   renderInspectorMembers([user, state.me].filter(Boolean));
-  el.messages.scrollTop = el.messages.scrollHeight;
+  scheduleScrollToLatest();
 }
 
 async function refreshData() {

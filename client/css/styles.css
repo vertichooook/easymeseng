@@ -1366,7 +1366,9 @@ dialog[open] { animation: modalIn 0.16s ease both; }
     position: fixed;
     inset: 0;
     height: var(--app-height);
+    max-height: var(--app-height);
     grid-template-columns: 1fr;
+    overscroll-behavior: none;
   }
 
   .sidebar {
@@ -1393,8 +1395,10 @@ dialog[open] { animation: modalIn 0.16s ease both; }
 
   .chat {
     height: var(--app-height);
+    max-height: var(--app-height);
     grid-template-rows: auto minmax(0, 1fr) auto auto;
     overflow: hidden;
+    overscroll-behavior: none;
   }
 
   .chat-header {
@@ -1414,6 +1418,8 @@ dialog[open] { animation: modalIn 0.16s ease both; }
     padding: 12px 9px 8px;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scroll-padding-bottom: 8px;
   }
 
   .message {
@@ -1981,6 +1987,11 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   body.keyboard-open .chat,
   body.sidebar-open .chat {
     height: var(--app-height);
+    max-height: var(--app-height);
+  }
+
+  body.keyboard-open .messages {
+    padding-bottom: 6px;
   }
 
   .nav-rail .logo-mark {
