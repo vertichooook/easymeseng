@@ -143,6 +143,73 @@ npm install --omit=dev
 sudo systemctl restart messenger
 ```
 
+## Encrypted backup SQLite + uploads
+
+Рекомендуемый вариант для VDS: хранить резервные копии SQLite и `uploads/` только в зашифрованном виде. Пароль/ключ не коммитьте в Git и не кладите рядом с backup-архивом.
+
+Один раз создайте файл с длинным паролем на сервере:
+
+```bash
+sudo install -m 700 -d /etc/nexus
+openssl rand -base64 48 | sudo tee /etc/nexus/backup.pass >/dev/null
+sudo chmod 600 /etc/nexus/backup.pass
+```
+
+Создать зашифрованный backup:
+
+```bash
+cd /var/www/messenger
+BACKUP_PASSPHRASE_FILE=/etc/nexus/backup.pass ./scripts/backup-encrypted.sh
+```
+
+Результат появится в `backups/nexus-YYYY-MM-DD-HHMMSS.tar.gz.enc`. Внутри backup лежат:
+
+- SQLite база `data/messenger.sqlite`;
+- все файлы из `uploads/`;
+- manifest с технической информацией.
+
+Можно задать пути явно:
+
+```bash
+BACKUP_PASSPHRASE_FILE=/etc/nexus/backup.pass \
+DATA_DIR=/var/www/messenger/data \
+UPLOADS_DIR=/var/www/messenger/uploads \
+BACKUP_DIR=/var/backups/nexus \
+./scripts/backup-encrypted.sh
+```
+
+Для автоматического ежедневного backup через cron:
+
+```bash
+sudo crontab -e
+```
+
+```cron
+15 3 * * * cd /var/www/messenger && BACKUP_PASSPHRASE_FILE=/etc/nexus/backup.pass ./scripts/backup-encrypted.sh >/var/log/nexus-backup.log 2>&1
+```
+
+Проверить расшифровку без восстановления:
+
+```bash
+BACKUP_PASSPHRASE_FILE=/etc/nexus/backup.pass \
+openssl enc -d -aes-256-cbc -salt -pbkdf2 -iter 200000 -md sha256 \
+  -in backups/nexus-YYYY-MM-DD-HHMMSS.tar.gz.enc | tar -tzf - | head
+```
+
+## Restore encrypted backup
+
+Перед восстановлением остановите приложение:
+
+```bash
+cd /var/www/messenger
+docker compose stop backend
+CONFIRM_RESTORE=1 BACKUP_PASSPHRASE_FILE=/etc/nexus/backup.pass \
+  ./scripts/restore-encrypted.sh backups/nexus-YYYY-MM-DD-HHMMSS.tar.gz.enc
+docker compose start backend
+```
+
+Скрипт перед заменой создаёт локальную копию текущих `data/` и `uploads/` в `backups/pre-restore-*`.
+
 ## Backup SQLite
 
 ```bash
