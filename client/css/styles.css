@@ -2807,3 +2807,186 @@ body.message-pressing .message * {
   user-select: none !important;
   -webkit-user-select: none !important;
 }
+
+/* WebRTC calls */
+.call-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.call-icon {
+  position: relative;
+}
+
+.call-audio-icon::before {
+  content: "";
+  width: 17px;
+  height: 17px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-left-color: transparent;
+  border-radius: 5px 5px 9px 5px;
+  transform: rotate(45deg);
+}
+
+.call-video-icon::before {
+  content: "";
+  width: 18px;
+  height: 13px;
+  border: 2px solid currentColor;
+  border-radius: 5px;
+}
+
+.call-video-icon::after {
+  content: "";
+  position: absolute;
+  right: 7px;
+  width: 8px;
+  height: 9px;
+  background: currentColor;
+  clip-path: polygon(0 25%, 100% 0, 100% 100%, 0 75%);
+}
+
+.call-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgb(0 0 0 / 0.48);
+  backdrop-filter: blur(12px);
+}
+
+.call-card {
+  width: min(420px, 94vw);
+  padding: 14px;
+  display: grid;
+  gap: 14px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+
+.call-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.call-top div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.call-top strong,
+.call-top span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.call-top span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.call-media {
+  position: relative;
+  min-height: 250px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--panel-2) 82%, black);
+}
+
+.remote-call-video {
+  width: 100%;
+  height: 100%;
+  min-height: 250px;
+  object-fit: cover;
+}
+
+.local-call-video {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 104px;
+  height: 138px;
+  object-fit: cover;
+  border: 2px solid rgb(255 255 255 / 0.82);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.audio-call-avatar .avatar {
+  width: 112px;
+  height: 112px;
+  font-size: 32px;
+}
+
+.incoming-call-actions,
+.active-call-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.call-end-icon::before {
+  content: "";
+  width: 20px;
+  height: 11px;
+  border: 3px solid currentColor;
+  border-bottom: 0;
+  border-radius: 18px 18px 0 0;
+  transform: rotate(180deg);
+}
+
+.call-mic-on::before,
+.call-camera-on::before {
+  content: "";
+  width: 15px;
+  height: 20px;
+  border: 2px solid currentColor;
+  border-radius: 9px;
+}
+
+.call-camera-on::before {
+  width: 18px;
+  height: 13px;
+  border-radius: 5px;
+}
+
+.call-icon.muted::after {
+  content: "";
+  position: absolute;
+  width: 26px;
+  height: 2px;
+  background: var(--danger);
+  transform: rotate(-38deg);
+}
+
+@media (max-width: 760px) {
+  .call-actions {
+    gap: 6px;
+  }
+
+  .call-actions .icon-button {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+  }
+
+  .call-card {
+    align-self: end;
+    border-radius: 24px 24px max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-bottom));
+  }
+}

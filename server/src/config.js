@@ -20,6 +20,10 @@ module.exports = {
   vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
   vapidSubject: process.env.VAPID_SUBJECT || 'mailto:admin@example.com',
   adminPassword: process.env.ADMIN_PASSWORD || '',
+  webrtcStunUrl: process.env.WEBRTC_STUN_URL || 'stun:stun.l.google.com:19302',
+  webrtcTurnUrl: process.env.WEBRTC_TURN_URL || '',
+  webrtcTurnUsername: process.env.WEBRTC_TURN_USERNAME || '',
+  webrtcTurnPassword: process.env.WEBRTC_TURN_PASSWORD || '',
   maxMessageLength: 1000,
   maxUsernameLength: 32,
   maxRoomNameLength: 60

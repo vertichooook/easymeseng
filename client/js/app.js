@@ -22,6 +22,8 @@ const state = {
   recordTimerInterval: null,
   recordStream: null,
   cameraFacing: 'user',
+  call: null,
+  webrtcConfig: null,
   typing: new Map(),
   recorder: null,
   chunks: [],
@@ -45,6 +47,8 @@ const el = {
   title: document.querySelector('#chatTitle'),
   chatAvatar: document.querySelector('#chatAvatar'),
   chatHeaderButton: document.querySelector('#chatHeaderButton'),
+  audioCallButton: document.querySelector('#audioCallButton'),
+  videoCallButton: document.querySelector('#videoCallButton'),
   pinnedBar: document.querySelector('#pinnedBar'),
   status: document.querySelector('#connectionStatus'),
   form: document.querySelector('#messageForm'),
@@ -95,6 +99,23 @@ const el = {
   registrationCodeModal: document.querySelector('#registrationCodeModal'),
   newRegistrationCode: document.querySelector('#newRegistrationCode')
 };
+
+Object.assign(el, {
+  callOverlay: document.querySelector('#callOverlay'),
+  callTitle: document.querySelector('#callTitle'),
+  callStatus: document.querySelector('#callStatus'),
+  callCloseButton: document.querySelector('#callCloseButton'),
+  remoteCallVideo: document.querySelector('#remoteCallVideo'),
+  localCallVideo: document.querySelector('#localCallVideo'),
+  audioCallAvatar: document.querySelector('#audioCallAvatar'),
+  incomingCallActions: document.querySelector('#incomingCallActions'),
+  activeCallActions: document.querySelector('#activeCallActions'),
+  acceptCallButton: document.querySelector('#acceptCallButton'),
+  rejectCallButton: document.querySelector('#rejectCallButton'),
+  muteCallButton: document.querySelector('#muteCallButton'),
+  cameraCallButton: document.querySelector('#cameraCallButton'),
+  endCallButton: document.querySelector('#endCallButton')
+});
 
 const chatKey = (type, id) => `${type}:${id}`;
 const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
@@ -793,6 +814,9 @@ function setHeader() {
     const muted = currentChatMuted() ? ' · muted' : '';
     el.inspectorMeta.textContent = `${type}${muted}`;
   }
+  const canCall = state.chat.type === 'private' && Boolean(item);
+  if (el.audioCallButton) el.audioCallButton.hidden = !canCall;
+  if (el.videoCallButton) el.videoCallButton.hidden = !canCall;
 }
 
 function updateHeaderStatus() {
@@ -810,6 +834,8 @@ function showEmptyChat() {
   el.title.textContent = 'Чатов пока нет';
   el.chatAvatar.outerHTML = '<span id="chatAvatar" class="avatar small">N</span>';
   el.chatAvatar = document.querySelector('#chatAvatar');
+  if (el.audioCallButton) el.audioCallButton.hidden = true;
+  if (el.videoCallButton) el.videoCallButton.hidden = true;
   if (el.inspectorAvatar) el.inspectorAvatar.innerHTML = '<span class="avatar large">N</span>';
   if (el.inspectorTitle) el.inspectorTitle.textContent = 'Nexus';
   if (el.inspectorMeta) el.inspectorMeta.textContent = 'No active chat';
@@ -980,6 +1006,219 @@ function sendMessage(body, attachment = null) {
   sendMessageAsync(body, attachment).catch(() => {});
 }
 
+async function getWebrtcConfig() {
+  if (!state.webrtcConfig) state.webrtcConfig = await api('/api/webrtc/config');
+  return state.webrtcConfig;
+}
+
+function currentCallUser() {
+  if (!state.call) return null;
+  return state.users.find((user) => user.id === state.call.peerId) || state.call.user || null;
+}
+
+function setCallStatus(text) {
+  if (el.callStatus) el.callStatus.textContent = text;
+}
+
+function renderCallOverlay() {
+  const call = state.call;
+  if (!call) {
+    el.callOverlay.hidden = true;
+    return;
+  }
+  const user = currentCallUser();
+  el.callOverlay.hidden = false;
+  el.callTitle.textContent = `${call.kind === 'video' ? 'Видео' : 'Аудио'}: ${displayName(user)}`;
+  el.incomingCallActions.hidden = call.state !== 'incoming';
+  el.activeCallActions.hidden = call.state === 'incoming';
+  el.cameraCallButton.hidden = call.kind !== 'video';
+  el.audioCallAvatar.innerHTML = avatar(user, 'large');
+  el.audioCallAvatar.hidden = call.kind === 'video' && Boolean(call.remoteStream);
+  el.remoteCallVideo.hidden = call.kind !== 'video' || !call.remoteStream;
+  el.localCallVideo.hidden = call.kind !== 'video' || !call.localStream;
+  el.muteCallButton.classList.toggle('muted', Boolean(call.muted));
+  el.cameraCallButton.classList.toggle('muted', Boolean(call.cameraOff));
+}
+
+async function flushCallIceCandidates(pc) {
+  const call = state.call;
+  if (!call?.pendingCandidates?.length || !pc.remoteDescription) return;
+  const candidates = call.pendingCandidates.splice(0);
+  for (const candidate of candidates) {
+    try {
+      await pc.addIceCandidate(candidate);
+    } catch (_error) {}
+  }
+}
+
+function stopCallMedia() {
+  state.call?.localStream?.getTracks().forEach((track) => track.stop());
+  state.call?.remoteStream?.getTracks().forEach((track) => track.stop());
+  if (el.localCallVideo) el.localCallVideo.srcObject = null;
+  if (el.remoteCallVideo) el.remoteCallVideo.srcObject = null;
+}
+
+function closePeerConnection() {
+  try { state.call?.pc?.close(); } catch (_error) {}
+}
+
+function cleanupCall(reason = '') {
+  stopCallMedia();
+  closePeerConnection();
+  state.call = null;
+  setCallStatus(reason);
+  renderCallOverlay();
+}
+
+async function ensureCallPeerConnection() {
+  const call = state.call;
+  if (!call) throw new Error('Звонок не найден.');
+  if (call.pc) return call.pc;
+  const { iceServers } = await getWebrtcConfig();
+  const pc = new RTCPeerConnection({ iceServers });
+  call.pc = pc;
+  pc.onicecandidate = (event) => {
+    if (!event.candidate || !state.call) return;
+    state.socket.emit('call:ice', { to: call.peerId, callId: call.callId, candidate: event.candidate });
+  };
+  pc.ontrack = (event) => {
+    if (!state.call) return;
+    const [stream] = event.streams;
+    state.call.remoteStream = stream;
+    el.remoteCallVideo.srcObject = stream;
+    setCallStatus('В звонке');
+    renderCallOverlay();
+  };
+  pc.onconnectionstatechange = () => {
+    if (!state.call) return;
+    if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
+      setCallStatus(pc.connectionState === 'failed' ? 'Не удалось соединиться' : 'Соединение прервано');
+    }
+  };
+  return pc;
+}
+
+async function prepareLocalCallMedia(kind) {
+  const constraints = kind === 'video'
+    ? { audio: true, video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } }
+    : { audio: { echoCancellation: true, noiseSuppression: true }, video: false };
+  const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  state.call.localStream = stream;
+  if (el.localCallVideo) el.localCallVideo.srcObject = stream;
+  const pc = await ensureCallPeerConnection();
+  stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+  renderCallOverlay();
+}
+
+async function startCall(kind) {
+  if (state.chat.type !== 'private') return;
+  if (state.call) return toast('Звонок уже идет.');
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) {
+    return toast('Для звонков нужен HTTPS и поддержка WebRTC в браузере.');
+  }
+  const user = currentItem();
+  state.call = { state: 'outgoing', kind, peerId: user.id, user, muted: false, cameraOff: false, pendingCandidates: [] };
+  setCallStatus('Вызываем...');
+  renderCallOverlay();
+  state.socket.emit('call:invite', { to: user.id, kind }, async (ack) => {
+    if (ack?.error) {
+      cleanupCall();
+      return toast(ack.error);
+    }
+    if (!state.call) return;
+    state.call.callId = ack.callId;
+    state.call.kind = ack.kind;
+    setCallStatus('Ждем ответа...');
+  });
+}
+
+async function acceptIncomingCall() {
+  if (!state.call || state.call.state !== 'incoming') return;
+  try {
+    state.call.state = 'connecting';
+    setCallStatus('Подключаемся...');
+    await prepareLocalCallMedia(state.call.kind);
+    state.socket.emit('call:accept', { to: state.call.peerId, callId: state.call.callId });
+    renderCallOverlay();
+  } catch (error) {
+    state.socket.emit('call:reject', { to: state.call.peerId, callId: state.call.callId, reason: 'media-error' });
+    cleanupCall();
+    toast(error.name === 'NotAllowedError' ? 'Доступ к камере или микрофону запрещен.' : 'Не удалось начать звонок.');
+  }
+}
+
+async function createAndSendOffer() {
+  if (!state.call) return;
+  try {
+    await prepareLocalCallMedia(state.call.kind);
+    const pc = await ensureCallPeerConnection();
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    state.socket.emit('call:offer', { to: state.call.peerId, callId: state.call.callId, description: pc.localDescription });
+    setCallStatus('Соединяем...');
+  } catch (error) {
+    endCall('media-error');
+    toast(error.name === 'NotAllowedError' ? 'Доступ к камере или микрофону запрещен.' : 'Не удалось начать звонок.');
+  }
+}
+
+async function handleCallOffer(event) {
+  if (!state.call || state.call.callId !== event.callId) return;
+  const pc = await ensureCallPeerConnection();
+  await pc.setRemoteDescription(event.description);
+  await flushCallIceCandidates(pc);
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  state.socket.emit('call:answer', { to: state.call.peerId, callId: state.call.callId, description: pc.localDescription });
+  setCallStatus('В звонке');
+}
+
+async function handleCallAnswer(event) {
+  if (!state.call || state.call.callId !== event.callId) return;
+  const pc = await ensureCallPeerConnection();
+  await pc.setRemoteDescription(event.description);
+  await flushCallIceCandidates(pc);
+  setCallStatus('В звонке');
+}
+
+async function handleCallIce(event) {
+  if (!state.call || state.call.callId !== event.callId || !event.candidate) return;
+  const pc = await ensureCallPeerConnection();
+  if (!pc.remoteDescription) {
+    state.call.pendingCandidates = state.call.pendingCandidates || [];
+    state.call.pendingCandidates.push(event.candidate);
+    return;
+  }
+  try {
+    await pc.addIceCandidate(event.candidate);
+  } catch (_error) {}
+}
+
+function rejectCall(reason = 'rejected') {
+  if (!state.call) return;
+  state.socket.emit('call:reject', { to: state.call.peerId, callId: state.call.callId, reason });
+  cleanupCall();
+}
+
+function endCall(reason = 'ended') {
+  if (state.call?.peerId) state.socket.emit('call:end', { to: state.call.peerId, callId: state.call.callId, reason });
+  cleanupCall();
+}
+
+function toggleCallMute() {
+  if (!state.call?.localStream) return;
+  state.call.muted = !state.call.muted;
+  state.call.localStream.getAudioTracks().forEach((track) => { track.enabled = !state.call.muted; });
+  renderCallOverlay();
+}
+
+function toggleCallCamera() {
+  if (!state.call?.localStream) return;
+  state.call.cameraOff = !state.call.cameraOff;
+  state.call.localStream.getVideoTracks().forEach((track) => { track.enabled = !state.call.cameraOff; });
+  renderCallOverlay();
+}
+
 function bumpUnread(type, id, mentioned = false) {
   if (state.chat.type === type && state.chat.id === id && document.hasFocus()) return;
   const key = chatKey(type, id);
@@ -1027,6 +1266,40 @@ function setupSocket() {
     state.onlineIds = new Set(users.map((user) => user.id));
     updateHeaderStatus();
     renderLists();
+  });
+  state.socket.on('call:incoming', (event) => {
+    if (state.call) {
+      state.socket.emit('call:reject', { to: event.from, callId: event.callId, reason: 'busy' });
+      return;
+    }
+    state.call = {
+      state: 'incoming',
+      kind: event.kind === 'video' ? 'video' : 'audio',
+      callId: event.callId,
+      peerId: event.from,
+      user: event.user,
+      muted: false,
+      cameraOff: false,
+      pendingCandidates: []
+    };
+    setCallStatus('Входящий звонок');
+    renderCallOverlay();
+  });
+  state.socket.on('call:accepted', async (event) => {
+    if (!state.call || state.call.callId !== event.callId) return;
+    state.call.state = 'connecting';
+    await createAndSendOffer();
+  });
+  state.socket.on('call:rejected', (event) => {
+    if (!state.call || state.call.callId !== event.callId) return;
+    cleanupCall(event.reason === 'busy' ? 'Пользователь занят' : 'Звонок отклонен');
+  });
+  state.socket.on('call:offer', (event) => handleCallOffer(event).catch(() => endCall('offer-error')));
+  state.socket.on('call:answer', (event) => handleCallAnswer(event).catch(() => endCall('answer-error')));
+  state.socket.on('call:ice', (event) => handleCallIce(event));
+  state.socket.on('call:ended', (event) => {
+    if (!state.call || state.call.callId !== event.callId) return;
+    cleanupCall(event.reason === 'timeout' ? 'Нет ответа' : 'Звонок завершен');
   });
   state.socket.on('room:created', (room) => {
     if (!state.rooms.some((item) => item.id === room.id)) state.rooms.push(room);
@@ -1978,6 +2251,17 @@ document.querySelector('#roomForm').addEventListener('submit', async (event) => 
 
 document.querySelector('#openSidebar').onclick = () => setSidebarOpen(true);
 document.querySelector('#closeSidebar').onclick = () => setSidebarOpen(false);
+el.audioCallButton?.addEventListener('click', () => startCall('audio'));
+el.videoCallButton?.addEventListener('click', () => startCall('video'));
+el.acceptCallButton?.addEventListener('click', acceptIncomingCall);
+el.rejectCallButton?.addEventListener('click', () => rejectCall());
+el.endCallButton?.addEventListener('click', () => endCall());
+el.callCloseButton?.addEventListener('click', () => {
+  if (state.call?.state === 'incoming') rejectCall();
+  else endCall();
+});
+el.muteCallButton?.addEventListener('click', toggleCallMute);
+el.cameraCallButton?.addEventListener('click', toggleCallCamera);
 
 window.addEventListener('touchstart', (event) => {
   if (window.innerWidth > 760 || document.body.classList.contains('sidebar-open')) return;

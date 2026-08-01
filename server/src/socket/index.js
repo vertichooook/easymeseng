@@ -9,6 +9,7 @@ const { privateChatKey, pinnedPayload } = require('../utils/pins');
 
 const online = new Map();
 const typingTimers = new Map();
+const callTimers = new Map();
 
 const publicUser = (user) => ({ id: user.id, username: user.username, display_name: user.display_name, avatar_url: user.avatar_url || null });
 const onlinePayload = () => Array.from(online.values()).map((entry) => publicUser(entry.user));
@@ -117,6 +118,28 @@ function emitPrivate(io, userId, targetId, message) {
   io.to(`user:${userId}`).to(`user:${targetId}`).emit('private:new', message);
 }
 
+function callIdFor(a, b) {
+  const left = Number(a);
+  const right = Number(b);
+  return `call:${Math.min(left, right)}:${Math.max(left, right)}:${Date.now().toString(36)}`;
+}
+
+function canSignalCall(fromUserId, toUserId) {
+  const targetId = Number(toUserId);
+  return targetId && targetId !== fromUserId && Boolean(q.findUserById.get(targetId));
+}
+
+function relayCall(io, socket, eventName, payload = {}, ack) {
+  const targetId = Number(payload.to);
+  if (!canSignalCall(socket.user.id, targetId)) return ack?.({ error: 'Пользователь не найден.' });
+  io.to(`user:${targetId}`).emit(eventName, {
+    ...payload,
+    from: socket.user.id,
+    user: publicUser(socket.user)
+  });
+  return ack?.({ ok: true });
+}
+
 function registerSocket(io) {
   io.use(socketAuth);
 
@@ -197,6 +220,48 @@ function registerSocket(io) {
       if (active === false) entry.activeSockets.delete(socket.id);
       else entry.activeSockets.add(socket.id);
       entry.active = entry.activeSockets.size > 0;
+    });
+
+    socket.on('call:invite', ({ to, kind }, ack) => {
+      const targetId = Number(to);
+      if (!canSignalCall(userId, targetId)) return ack?.({ error: 'Пользователь не найден.' });
+      const callId = callIdFor(userId, targetId);
+      const callKind = kind === 'video' ? 'video' : 'audio';
+      io.to(`user:${targetId}`).emit('call:incoming', {
+        callId,
+        from: userId,
+        to: targetId,
+        kind: callKind,
+        user: publicUser(socket.user)
+      });
+      clearTimeout(callTimers.get(callId));
+      callTimers.set(callId, setTimeout(() => {
+        io.to(`user:${userId}`).to(`user:${targetId}`).emit('call:ended', { callId, reason: 'timeout', from: targetId });
+        callTimers.delete(callId);
+      }, 45000).unref());
+      return ack?.({ ok: true, callId, kind: callKind });
+    });
+
+    socket.on('call:accept', (payload, ack) => {
+      if (payload?.callId) clearTimeout(callTimers.get(payload.callId));
+      if (payload?.callId) callTimers.delete(payload.callId);
+      return relayCall(io, socket, 'call:accepted', payload, ack);
+    });
+
+    socket.on('call:reject', (payload, ack) => {
+      if (payload?.callId) clearTimeout(callTimers.get(payload.callId));
+      if (payload?.callId) callTimers.delete(payload.callId);
+      return relayCall(io, socket, 'call:rejected', payload, ack);
+    });
+
+    socket.on('call:offer', (payload, ack) => relayCall(io, socket, 'call:offer', payload, ack));
+    socket.on('call:answer', (payload, ack) => relayCall(io, socket, 'call:answer', payload, ack));
+    socket.on('call:ice', (payload, ack) => relayCall(io, socket, 'call:ice', payload, ack));
+
+    socket.on('call:end', (payload, ack) => {
+      if (payload?.callId) clearTimeout(callTimers.get(payload.callId));
+      if (payload?.callId) callTimers.delete(payload.callId);
+      return relayCall(io, socket, 'call:ended', payload, ack);
     });
 
     socket.on('message:react', ({ chatType, messageId, reaction }, ack) => {

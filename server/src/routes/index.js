@@ -6,6 +6,7 @@ const privateRoutes = require('./private');
 const uploads = require('./uploads');
 const push = require('./push');
 const admin = require('./admin');
+const webrtc = require('./webrtc');
 
 const router = express.Router();
 
@@ -17,5 +18,6 @@ router.use('/private', privateRoutes);
 router.use('/uploads', uploads);
 router.use('/push', push);
 router.use('/admin', admin);
+router.use('/webrtc', webrtc);
 
 module.exports = router;

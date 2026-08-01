@@ -67,7 +67,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   path: '/socket.io',
   cors: false,
-  maxHttpBufferSize: 4096
+  maxHttpBufferSize: 65536
 });
 app.set('io', io);
 registerSocket(io);

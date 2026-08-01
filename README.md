@@ -306,3 +306,66 @@ curl -i https://chat.example.com/api/health
 - Уведомления не появляются: разрешите уведомления в браузере; для большинства браузеров нужен HTTPS.
 - Пользователь не видит комнату: новые комнаты доступны только автору и приглашённым участникам.
 - Ошибка native-модуля SQLite: пересоберите контейнер `docker compose build --no-cache`.
+
+## WebRTC звонки
+
+Nexus поддерживает аудио- и видеозвонки 1-на-1 через WebRTC. Socket.IO используется только для сигналинга: `call:invite`, `call:accept`, `call:offer`, `call:answer`, `call:ice`, `call:end`. Сам аудио/видео поток шифруется браузером через DTLS-SRTP.
+
+Минимально достаточно HTTPS и STUN:
+
+```env
+WEBRTC_STUN_URL=stun:stun.l.google.com:19302
+```
+
+Для стабильной работы на мобильном интернете и за NAT лучше поднять TURN через coturn и добавить:
+
+```env
+WEBRTC_TURN_URL=turn:chat-nexus.duckdns.org:3478
+WEBRTC_TURN_USERNAME=nexus
+WEBRTC_TURN_PASSWORD=long_random_password
+```
+
+После изменения `.env` перезапустите backend:
+
+```bash
+docker compose up -d --build backend
+```
+
+Для coturn на Ubuntu:
+
+```bash
+sudo apt update
+sudo apt install coturn
+sudo nano /etc/turnserver.conf
+```
+
+Минимальный пример `/etc/turnserver.conf`:
+
+```conf
+listening-port=3478
+fingerprint
+lt-cred-mech
+realm=chat-nexus.duckdns.org
+user=nexus:long_random_password
+min-port=49160
+max-port=49200
+no-multicast-peers
+no-cli
+```
+
+Включение сервиса:
+
+```bash
+sudo sed -i 's/#TURNSERVER_ENABLED=1/TURNSERVER_ENABLED=1/' /etc/default/coturn
+sudo systemctl enable coturn
+sudo systemctl restart coturn
+sudo systemctl status coturn
+```
+
+Firewall:
+
+```bash
+sudo ufw allow 3478/tcp
+sudo ufw allow 3478/udp
+sudo ufw allow 49160:49200/udp
+```

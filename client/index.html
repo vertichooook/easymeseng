@@ -78,6 +78,10 @@
             <strong id="chatTitle">Общий чат</strong>
           </span>
         </button>
+        <div class="call-actions">
+          <button id="audioCallButton" class="icon-button ghost call-icon call-audio-icon" type="button" title="Аудиозвонок" aria-label="Аудиозвонок" hidden></button>
+          <button id="videoCallButton" class="icon-button ghost call-icon call-video-icon" type="button" title="Видеозвонок" aria-label="Видеозвонок" hidden></button>
+        </div>
       </header>
       <div class="messages-wrap">
         <button id="pinnedBar" class="pinned-bar" type="button" hidden></button>
@@ -121,6 +125,32 @@
     <div class="record-preview-status">
       <span class="record-dot"></span>
       <span id="recordTimer">00:00</span>
+    </div>
+  </div>
+
+  <div id="callOverlay" class="call-overlay" hidden>
+    <div class="call-card">
+      <div class="call-top">
+        <div>
+          <strong id="callTitle">Звонок</strong>
+          <span id="callStatus">Соединение...</span>
+        </div>
+        <button id="callCloseButton" class="icon-button ghost" type="button" title="Закрыть">×</button>
+      </div>
+      <div class="call-media">
+        <video id="remoteCallVideo" class="remote-call-video" autoplay playsinline></video>
+        <video id="localCallVideo" class="local-call-video" autoplay muted playsinline></video>
+        <div id="audioCallAvatar" class="audio-call-avatar"></div>
+      </div>
+      <div id="incomingCallActions" class="incoming-call-actions" hidden>
+        <button id="acceptCallButton" type="button">Принять</button>
+        <button id="rejectCallButton" class="danger-fill" type="button">Отклонить</button>
+      </div>
+      <div id="activeCallActions" class="active-call-actions">
+        <button id="muteCallButton" class="icon-button ghost call-icon call-mic-on" type="button" title="Микрофон"></button>
+        <button id="cameraCallButton" class="icon-button ghost call-icon call-camera-on" type="button" title="Камера"></button>
+        <button id="endCallButton" class="icon-button danger-fill call-icon call-end-icon" type="button" title="Завершить"></button>
+      </div>
     </div>
   </div>
 
