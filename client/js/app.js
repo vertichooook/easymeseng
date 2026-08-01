@@ -388,6 +388,15 @@ function getDefaultReaction() {
   return reactionIcons[value] ? value : 'heart';
 }
 
+function getRingtonePresetKey() {
+  const value = localStorage.getItem('nexus:ringtone') || 'nexusPop';
+  return ringtonePresets[value] ? value : 'nexusPop';
+}
+
+function getRingtonePreset() {
+  return ringtonePresets[getRingtonePresetKey()];
+}
+
 function setupDefaultReactionSetting() {
   if (!el.settingsModal || document.querySelector('#defaultReactionSelect')) return;
   const label = document.createElement('label');
@@ -403,6 +412,31 @@ function setupDefaultReactionSetting() {
   const select = label.querySelector('select');
   select.value = getDefaultReaction();
   select.addEventListener('change', () => localStorage.setItem('nexus:defaultReaction', select.value));
+}
+
+function setupRingtoneSetting() {
+  if (!el.settingsModal || document.querySelector('#ringtoneSelect')) return;
+  const field = document.createElement('div');
+  field.className = 'settings-field ringtone-field';
+  field.innerHTML = `
+    <label>
+      <span>Рингтон на ПК</span>
+      <select id="ringtoneSelect">
+        ${Object.entries(ringtonePresets).map(([key, preset]) => `<option value="${key}">${escapeHtml(preset.name)}</option>`).join('')}
+      </select>
+    </label>
+    <button id="previewRingtoneButton" type="button">Прослушать</button>
+  `;
+  const closeButton = document.querySelector('#closeSettings');
+  closeButton?.before(field);
+  const select = field.querySelector('#ringtoneSelect');
+  select.value = getRingtonePresetKey();
+  select.addEventListener('change', () => localStorage.setItem('nexus:ringtone', select.value));
+  field.querySelector('#previewRingtoneButton').addEventListener('click', () => {
+    localStorage.setItem('nexus:ringtone', select.value);
+    stopDesktopRingtone();
+    startDesktopCallTone('incoming', { preview: true });
+  });
 }
 
 function avatar(entity, size = '') {
@@ -593,8 +627,88 @@ function bodyHtml(body) {
 }
 
 const reactionIcons = { heart: '❤️', like: '👍', fire: '🔥', cry: '😢', angry: '😡', dislike: '👎' };
+const ringtonePresets = {
+  nexusPop: {
+    name: 'Nexus Pop',
+    notes: [
+      { f: 523.25, d: 0.12 },
+      { f: 659.25, d: 0.12 },
+      { f: 783.99, d: 0.14 },
+      { f: 1046.5, d: 0.18 },
+      { f: 0, d: 0.46 },
+      { f: 783.99, d: 0.14 },
+      { f: 659.25, d: 0.12 },
+      { f: 880, d: 0.18 },
+      { f: 0, d: 0.56 }
+    ]
+  },
+  softMessenger: {
+    name: 'Soft Messenger',
+    notes: [
+      { f: 659.25, d: 0.16 },
+      { f: 493.88, d: 0.16 },
+      { f: 523.25, d: 0.18 },
+      { f: 783.99, d: 0.22 },
+      { f: 0, d: 0.62 }
+    ]
+  },
+  arcadeCall: {
+    name: 'Arcade Call',
+    notes: [
+      { f: 880, d: 0.11 },
+      { f: 1046.5, d: 0.11 },
+      { f: 880, d: 0.11 },
+      { f: 1318.51, d: 0.18 },
+      { f: 0, d: 0.48 }
+    ]
+  },
+  calmChime: {
+    name: 'Calm Chime',
+    notes: [
+      { f: 783.99, d: 0.28 },
+      { f: 1174.66, d: 0.36 },
+      { f: 0, d: 0.9 }
+    ]
+  },
+  retroMessenger: {
+    name: 'Retro Messenger',
+    notes: [
+      { f: 523.25, d: 0.11 },
+      { f: 587.33, d: 0.11 },
+      { f: 659.25, d: 0.11 },
+      { f: 783.99, d: 0.16 },
+      { f: 659.25, d: 0.16 },
+      { f: 0, d: 0.56 }
+    ]
+  },
+  happyBounce: {
+    name: 'Happy Bounce',
+    notes: [
+      { f: 523.25, d: 0.1 },
+      { f: 783.99, d: 0.1 },
+      { f: 880, d: 0.12 },
+      { f: 783.99, d: 0.1 },
+      { f: 659.25, d: 0.12 },
+      { f: 1046.5, d: 0.2 },
+      { f: 0, d: 0.55 }
+    ]
+  },
+  cleanBusiness: {
+    name: 'Clean Business',
+    notes: [
+      { f: 698.46, d: 0.18 },
+      { f: 880, d: 0.18 },
+      { f: 1046.5, d: 0.24 },
+      { f: 0, d: 0.5 },
+      { f: 880, d: 0.18 },
+      { f: 698.46, d: 0.24 },
+      { f: 0, d: 0.72 }
+    ]
+  }
+};
 
 setupDefaultReactionSetting();
+setupRingtoneSetting();
 
 function parseCallMessage(body) {
   const value = String(body || '');
@@ -1069,7 +1183,7 @@ function isMobileDevice() {
   return innerWidth < 760 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
 }
 
-function startDesktopCallTone(mode = 'incoming') {
+function startDesktopCallTone(mode = 'incoming', options = {}) {
   if (isMobileDevice() || state.ringtone) return;
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -1080,17 +1194,7 @@ function startDesktopCallTone(mode = 'incoming') {
     master.connect(context.destination);
     const melody = mode === 'outgoing'
       ? [{ f: 420, d: 0.22 }, { f: 0, d: 2.2 }]
-      : [
-        { f: 523.25, d: 0.12 },
-        { f: 659.25, d: 0.12 },
-        { f: 783.99, d: 0.14 },
-        { f: 1046.5, d: 0.18 },
-        { f: 0, d: 0.46 },
-        { f: 783.99, d: 0.14 },
-        { f: 659.25, d: 0.12 },
-        { f: 880, d: 0.18 },
-        { f: 0, d: 0.56 }
-      ];
+      : getRingtonePreset().notes;
     let index = 0;
     const tick = () => {
       const note = melody[index % melody.length];
@@ -1116,6 +1220,7 @@ function startDesktopCallTone(mode = 'incoming') {
     state.ringtone = { context, master, timeout: null };
     context.resume?.().catch(() => {});
     tick();
+    if (options.preview) setTimeout(stopDesktopRingtone, 4200);
   } catch (_error) {}
 }
 
