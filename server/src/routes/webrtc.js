@@ -3,6 +3,7 @@ const config = require('../config');
 const q = require('../database/queries');
 const { requireAuth } = require('../middleware/auth');
 const calls = require('../utils/calls');
+const { finishCall } = require('../utils/callRecords');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -33,6 +34,23 @@ router.get('/calls/pending', (req, res) => {
       user
     }
   });
+});
+
+router.post('/calls/:callId/reject', (req, res) => {
+  const call = calls.getCall(req.params.callId);
+  if (!call || call.receiverId !== req.user.id || call.status !== 'ringing') {
+    return res.status(404).json({ error: 'Звонок не найден.' });
+  }
+  const io = req.app.get('io');
+  finishCall(io, call.callId, 'missed');
+  io?.to(`user:${call.callerId}`).emit('call:rejected', {
+    callId: call.callId,
+    from: req.user.id,
+    to: call.callerId,
+    reason: 'rejected',
+    user: q.findUserById.get(req.user.id)
+  });
+  res.json({ ok: true });
 });
 
 module.exports = router;

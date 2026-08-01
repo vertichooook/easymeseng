@@ -7,7 +7,8 @@ function createCall({ callId, callerId, receiverId, kind }) {
     receiverId: Number(receiverId),
     kind: kind === 'video' ? 'video' : 'audio',
     status: 'ringing',
-    startedAt: Date.now()
+    startedAt: Date.now(),
+    timer: null
   };
   pendingCalls.set(callId, call);
   return call;
@@ -29,8 +30,24 @@ function markCall(callId, status) {
   return call;
 }
 
+function setTimer(callId, timer) {
+  const call = getCall(callId);
+  if (!call) return null;
+  if (call.timer) clearTimeout(call.timer);
+  call.timer = timer;
+  return call;
+}
+
+function clearTimer(callId) {
+  const call = getCall(callId);
+  if (!call?.timer) return;
+  clearTimeout(call.timer);
+  call.timer = null;
+}
+
 function deleteCall(callId) {
+  clearTimer(callId);
   pendingCalls.delete(callId);
 }
 
-module.exports = { createCall, deleteCall, getCall, getIncomingCall, markCall };
+module.exports = { clearTimer, createCall, deleteCall, getCall, getIncomingCall, markCall, setTimer };

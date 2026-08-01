@@ -5,12 +5,12 @@ const q = require('../database/queries');
 const { COOKIE_NAME } = require('../middleware/auth');
 const push = require('../utils/push');
 const calls = require('../utils/calls');
+const { finishCall } = require('../utils/callRecords');
 const { allowedReactions, decorateMessage, reactionPayload } = require('../utils/reactions');
 const { privateChatKey, pinnedPayload } = require('../utils/pins');
 
 const online = new Map();
 const typingTimers = new Map();
-const callTimers = new Map();
 
 const publicUser = (user) => ({ id: user.id, username: user.username, display_name: user.display_name, avatar_url: user.avatar_url || null });
 const onlinePayload = () => Array.from(online.values()).map((entry) => publicUser(entry.user));
@@ -142,36 +142,6 @@ function relayCall(io, socket, eventName, payload = {}, ack) {
   return ack?.({ ok: true });
 }
 
-function callBody(call, status) {
-  return `__nexus_call__${JSON.stringify({
-    callId: call.callId,
-    callerId: call.callerId,
-    receiverId: call.receiverId,
-    kind: call.kind,
-    status
-  })}`;
-}
-
-function emitCallLog(io, call, status) {
-  if (!call || call.logged) return null;
-  call.logged = true;
-  const result = q.insertPrivateMessage.run(call.callerId, call.receiverId, callBody(call, status), null, null, null, null, null, null, null, null);
-  const saved = decorateMessage(q.findPrivateMessageById.get(result.lastInsertRowid), 'private', null);
-  emitPrivate(io, call.callerId, call.receiverId, saved);
-  return saved;
-}
-
-function finishCall(io, callId, status) {
-  const call = calls.getCall(callId);
-  if (!call) return null;
-  clearTimeout(callTimers.get(callId));
-  callTimers.delete(callId);
-  const finalStatus = status === 'completed' && call.status !== 'accepted' ? 'missed' : status;
-  const saved = emitCallLog(io, call, finalStatus);
-  calls.deleteCall(callId);
-  return { call, saved };
-}
-
 function registerSocket(io) {
   io.use(socketAuth);
 
@@ -282,8 +252,7 @@ function registerSocket(io) {
           ]
         });
       }
-      clearTimeout(callTimers.get(callId));
-      callTimers.set(callId, setTimeout(() => {
+      calls.setTimer(callId, setTimeout(() => {
         finishCall(io, callId, 'missed');
         io.to(`user:${userId}`).to(`user:${targetId}`).emit('call:ended', { callId, reason: 'timeout', from: targetId });
       }, CALL_TIMEOUT_MS).unref());
@@ -291,8 +260,7 @@ function registerSocket(io) {
     });
 
     socket.on('call:accept', (payload, ack) => {
-      if (payload?.callId) clearTimeout(callTimers.get(payload.callId));
-      if (payload?.callId) callTimers.delete(payload.callId);
+      if (payload?.callId) calls.clearTimer(payload.callId);
       if (payload?.callId) calls.markCall(payload.callId, 'accepted');
       return relayCall(io, socket, 'call:accepted', payload, ack);
     });

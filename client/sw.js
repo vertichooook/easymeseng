@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nexus-shell-v28';
+const CACHE_NAME = 'nexus-shell-v29';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -93,6 +93,17 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = event.notification.data || {};
+  if (data.type === 'call' && event.action === 'reject-call' && data.call?.callId) {
+    event.waitUntil(
+      fetch(`/api/webrtc/calls/${encodeURIComponent(data.call.callId)}/reject`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+      }).catch(() => {})
+    );
+    return;
+  }
   let targetUrl = data.url || '/';
   if (data.type === 'call' && data.call?.callId && data.call?.from) {
     const action = event.action === 'answer-call' ? 'answer' : event.action === 'reject-call' ? 'reject' : 'open';
