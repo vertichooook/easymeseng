@@ -76,7 +76,7 @@ button {
 
 button:hover { background: color-mix(in srgb, var(--accent) 86%, black); }
 button:active { transform: translateY(1px) scale(0.985); }
-button[hidden] { display: none !important; }
+[hidden] { display: none !important; }
 
 .ghost {
   color: var(--text);
