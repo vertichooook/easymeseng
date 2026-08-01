@@ -383,6 +383,8 @@ function saveLastChat(type, id) {
 
 function renderSettingsProfile() {
   if (!state.me) return;
+  const settingsButton = document.querySelector('#settingsButton');
+  if (settingsButton) settingsButton.innerHTML = avatar(state.me, 'small');
   if (el.profileAvatarButton) el.profileAvatarButton.innerHTML = avatar(state.me, 'large');
   if (el.settingsDisplayName) el.settingsDisplayName.value = state.me.display_name || '';
   if (el.settingsProfileUsername) el.settingsProfileUsername.value = state.me.username || '';
@@ -444,11 +446,10 @@ function renderUnifiedChats() {
   const items = [...rooms, ...users].sort((a, b) => b.sort - a.sort || a.title.localeCompare(b.title));
   el.chats.innerHTML = items.length
     ? items.map((item) => `
-      <button class="list-item chat-list-item ${state.chat.type === item.type && state.chat.id === item.id ? 'active' : ''}" data-${item.type === 'room' ? 'room' : 'user'}="${item.id}">
+      <button class="list-item chat-list-item ${item.type === 'private' && state.onlineIds.has(item.id) ? 'user-online' : ''} ${state.chat.type === item.type && state.chat.id === item.id ? 'active' : ''}" data-${item.type === 'room' ? 'room' : 'user'}="${item.id}">
         ${avatar(item.entity, 'small')}
         <span>${escapeHtml(item.title)}</span>
         ${unreadBadge(item.type, item.id, item.muted)}
-        <small>${item.type === 'room' ? 'room' : `<i class="dot ${state.onlineIds.has(item.id) ? 'online' : ''}"></i>${state.onlineIds.has(item.id) ? 'online' : 'offline'}`}</small>
       </button>
     `).join('')
     : '<p class="muted-text">Пока нет чатов.</p>';
@@ -464,11 +465,10 @@ function renderLists() {
     </button>
   `).join('');
   el.users.innerHTML = state.users.map((user) => `
-    <button class="list-item ${state.chat.type === 'private' && state.chat.id === user.id ? 'active' : ''}" data-user="${user.id}">
+    <button class="list-item ${state.onlineIds.has(user.id) ? 'user-online' : ''} ${state.chat.type === 'private' && state.chat.id === user.id ? 'active' : ''}" data-user="${user.id}">
       ${avatar(user, 'small')}
       <span>${escapeHtml(displayName(user))}</span>
       ${unreadBadge('private', user.id, user.muted)}
-      <small><i class="dot ${state.onlineIds.has(user.id) ? 'online' : ''}"></i>${state.onlineIds.has(user.id) ? 'online' : 'offline'}</small>
     </button>
   `).join('');
   if (el.peopleContactsList) {
@@ -742,7 +742,8 @@ function renderTyping() {
 function setHeader() {
   const item = currentItem();
   el.title.textContent = state.chat.type === 'room' ? `# ${state.chat.title}` : displayName(item);
-  el.chatAvatar.outerHTML = avatar(state.chat.type === 'room' ? item : item, 'small').replace('class="avatar small"', 'id="chatAvatar" class="avatar small"');
+  const onlineClass = state.chat.type === 'private' && state.onlineIds.has(state.chat.id) ? ' user-online-avatar' : '';
+  el.chatAvatar.outerHTML = avatar(state.chat.type === 'room' ? item : item, 'small').replace('class="avatar small"', `id="chatAvatar" class="avatar small${onlineClass}"`);
   el.chatAvatar = document.querySelector('#chatAvatar');
   if (el.inspectorAvatar) el.inspectorAvatar.innerHTML = avatar(item, 'large');
   if (el.inspectorTitle) el.inspectorTitle.textContent = state.chat.type === 'room' ? `# ${state.chat.title}` : displayName(item);
@@ -755,15 +756,8 @@ function setHeader() {
 
 function updateHeaderStatus() {
   if (!el.status) return;
-  if (!state.socket?.connected) {
-    el.status.textContent = 'offline';
-    return;
-  }
-  if (state.chat.type === 'private') {
-    el.status.textContent = state.onlineIds.has(state.chat.id) ? 'online' : 'offline';
-    return;
-  }
-  el.status.textContent = state.socket?.connected ? 'online' : 'offline';
+  el.status.textContent = '';
+  setHeader();
 }
 
 function showEmptyChat() {

@@ -2581,6 +2581,39 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   content: none !important;
 }
 
+.settings-entry-button {
+  border-radius: 50%;
+  overflow: visible;
+}
+
+.settings-entry-button .avatar {
+  width: 40px;
+  height: 40px;
+}
+
+.avatar {
+  position: relative;
+}
+
+.list-item.user-online .avatar::after,
+.avatar.user-online-avatar::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+  background: #28d17c;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #28d17c 22%, transparent);
+}
+
+.chat-title-button .status,
+.chat-list-item small {
+  display: none !important;
+}
+
 .settings-profile-form {
   min-width: min(420px, 92vw);
 }
