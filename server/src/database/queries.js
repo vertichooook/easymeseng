@@ -168,6 +168,16 @@ module.exports = {
   unmuteChat: db.prepare('DELETE FROM muted_chats WHERE user_id = ? AND target_type = ? AND target_id = ?'),
   findMutedChat: db.prepare('SELECT 1 FROM muted_chats WHERE user_id = ? AND target_type = ? AND target_id = ?'),
   listMutedChats: db.prepare('SELECT target_type, target_id FROM muted_chats WHERE user_id = ?'),
+  findPinnedMessage: db.prepare('SELECT chat_type, chat_key, message_id, pinned_by, pinned_at FROM pinned_messages WHERE chat_type = ? AND chat_key = ?'),
+  upsertPinnedMessage: db.prepare(`
+    INSERT INTO pinned_messages (chat_type, chat_key, message_id, pinned_by)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(chat_type, chat_key) DO UPDATE SET
+      message_id = excluded.message_id,
+      pinned_by = excluded.pinned_by,
+      pinned_at = datetime('now')
+  `),
+  deletePinnedMessage: db.prepare('DELETE FROM pinned_messages WHERE chat_type = ? AND chat_key = ?'),
 
   upsertPushSubscription: db.prepare(`
     INSERT INTO push_subscriptions (endpoint, user_id, p256dh, auth, user_agent)

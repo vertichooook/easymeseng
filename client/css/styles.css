@@ -2068,3 +2068,305 @@ dialog[open] { animation: modalIn 0.16s ease both; }
     height: calc(100% - max(16px, env(safe-area-inset-bottom)));
   }
 }
+
+/* Compact Telegram-like chat refresh */
+.chat {
+  background:
+    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 30%),
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-2) 70%, var(--canvas)), var(--canvas));
+}
+
+.chat-header {
+  min-height: 56px;
+  padding: 8px 14px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  box-shadow: 0 10px 26px rgb(20 30 42 / 0.06);
+}
+
+.pinned-bar {
+  width: auto;
+  min-height: 42px;
+  margin: 8px max(12px, calc((100% - 900px) / 2)) 0;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  color: var(--text);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border-left: 4px solid var(--accent);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.pinned-bar:hover {
+  background: var(--panel);
+}
+
+.pinned-bar .pin-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border-radius: 6px 6px 12px 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-3));
+  transform: rotate(-18deg);
+}
+
+.pinned-bar strong,
+.pinned-bar small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pinned-bar strong {
+  font-size: 13px;
+}
+
+.pinned-bar small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.messages {
+  padding: 14px max(12px, calc((100% - 900px) / 2)) 8px;
+  gap: 6px;
+}
+
+.message {
+  max-width: min(660px, 76%);
+  padding: 7px 10px 5px;
+  border: 1px solid color-mix(in srgb, var(--line) 52%, transparent);
+  border-radius: 18px 18px 18px 6px;
+  background: color-mix(in srgb, var(--theirs) 96%, transparent);
+  box-shadow: 0 2px 8px rgb(20 30 42 / 0.06);
+}
+
+.message.mine {
+  border-radius: 18px 18px 6px 18px;
+  background: color-mix(in srgb, var(--mine) 96%, white);
+}
+
+.message.is-pinned {
+  border-color: color-mix(in srgb, var(--accent) 56%, var(--line));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent), 0 10px 28px rgb(20 30 42 / 0.10);
+}
+
+.message.pin-flash {
+  animation: pinFlash 0.9s ease;
+}
+
+@keyframes pinFlash {
+  0%, 100% { transform: translateY(0); }
+  35% { transform: translateY(-2px); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent), 0 14px 34px rgb(20 30 42 / 0.14); }
+}
+
+.message .avatar {
+  width: 32px;
+  height: 32px;
+}
+
+.message p {
+  line-height: 1.34;
+}
+
+.message-status {
+  margin-top: 0;
+  align-self: end;
+}
+
+.typing {
+  min-height: 18px;
+  padding: 0 max(12px, calc((100% - 900px) / 2));
+  font-size: 12px;
+}
+
+.composer {
+  width: 100%;
+  padding: 6px max(12px, calc((100% - 900px) / 2)) 10px;
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  background: transparent;
+}
+
+.composer::before {
+  display: none;
+}
+
+.composer textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 40px;
+  height: 40px;
+  max-height: 104px;
+  padding: 9px 14px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--panel) 96%, transparent);
+  box-shadow: 0 2px 12px rgb(20 30 42 / 0.06);
+}
+
+.composer .icon-button,
+#sendButton {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  flex: 0 0 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  box-shadow: 0 2px 12px rgb(20 30 42 / 0.06);
+}
+
+#sendButton {
+  font-size: 0;
+  color: white;
+  background: linear-gradient(135deg, var(--accent), var(--accent-3));
+}
+
+#sendButton::before {
+  content: "";
+  width: 17px;
+  height: 17px;
+  background: currentColor;
+  clip-path: polygon(0 8%, 100% 50%, 0 92%, 18% 55%, 52% 50%, 18% 45%);
+}
+
+@media (min-width: 761px) {
+  .composer {
+    flex-wrap: nowrap;
+  }
+
+  .composer textarea {
+    order: 1;
+  }
+
+  #attachButton {
+    order: 2;
+  }
+
+  #recordButton {
+    order: 3;
+  }
+
+  #sendButton {
+    order: 4;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    padding-bottom: 0;
+  }
+
+  .chat,
+  body.keyboard-open .chat,
+  body.sidebar-open .chat {
+    height: var(--app-height);
+    max-height: var(--app-height);
+  }
+
+  .chat-header {
+    min-height: 52px;
+    padding: max(7px, env(safe-area-inset-top)) 9px 7px;
+  }
+
+  .nav-rail {
+    left: auto;
+    right: 8px;
+    bottom: auto;
+    top: max(58px, calc(env(safe-area-inset-top) + 54px));
+    width: 48px;
+    height: auto;
+    padding: 6px;
+    flex-direction: column;
+    border: 1px solid rgb(255 255 255 / 0.10);
+    border-radius: 18px;
+    box-shadow: 0 16px 36px rgb(0 0 0 / 0.24);
+  }
+
+  body.sidebar-open .nav-rail,
+  body.keyboard-open .nav-rail {
+    display: none;
+  }
+
+  .rail-button {
+    width: 36px;
+    height: 36px;
+    border-radius: 13px;
+  }
+
+  .pinned-bar {
+    min-height: 38px;
+    margin: 6px 8px 0;
+    padding: 7px 9px;
+    border-radius: 14px;
+  }
+
+  .messages {
+    padding: 10px 8px 6px;
+    gap: 5px;
+  }
+
+  .message {
+    max-width: 92%;
+    padding: 7px 9px 5px;
+    border-radius: 16px 16px 16px 5px;
+  }
+
+  .message.mine {
+    border-radius: 16px 16px 5px 16px;
+  }
+
+  .composer {
+    position: relative;
+    padding: 5px 7px max(5px, env(safe-area-inset-bottom));
+    gap: 5px;
+  }
+
+  .composer textarea {
+    min-height: 38px;
+    height: 38px;
+    max-height: 86px;
+    padding: 8px 84px 8px 42px;
+    border-radius: 19px;
+  }
+
+  .composer .icon-button,
+  #sendButton {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+  }
+
+  #attachButton,
+  #recordButton,
+  #sendButton {
+    position: absolute;
+    z-index: 3;
+    bottom: max(7px, env(safe-area-inset-bottom));
+    box-shadow: none;
+  }
+
+  #attachButton {
+    left: 10px;
+  }
+
+  #recordButton {
+    right: 46px;
+  }
+
+  #sendButton {
+    right: 10px;
+  }
+
+  .typing {
+    padding: 0 10px;
+  }
+}

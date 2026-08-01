@@ -92,6 +92,7 @@
           </span>
         </button>
       </header>
+      <button id="pinnedBar" class="pinned-bar" type="button" hidden></button>
       <div id="messages" class="messages" aria-live="polite"></div>
       <div id="typing" class="typing"></div>
       <form id="messageForm" class="composer">
@@ -118,6 +119,7 @@
   </div>
 
   <div id="contextMenu" class="context-menu" hidden>
+    <button type="button" data-menu-action="pin">Закрепить</button>
     <button type="button" data-menu-action="reply">Ответить</button>
     <button type="button" data-menu-action="forward">Переслать</button>
     <button type="button" data-menu-action="delete">Удалить</button>

@@ -5,6 +5,7 @@ const q = require('../database/queries');
 const { COOKIE_NAME } = require('../middleware/auth');
 const push = require('../utils/push');
 const { allowedReactions, decorateMessage, reactionPayload } = require('../utils/reactions');
+const { privateChatKey, pinnedPayload } = require('../utils/pins');
 
 const online = new Map();
 const typingTimers = new Map();
@@ -224,6 +225,35 @@ function registerSocket(io) {
       return ack?.({ ok: true, chatType: type, messageId: id, ...reactionPayload(type, id, userId) });
     });
 
+    socket.on('message:pin', ({ chatType, messageId }, ack) => {
+      const type = chatType === 'room' ? 'room' : chatType === 'private' ? 'private' : null;
+      const id = Number(messageId);
+      if (!type || !id) return ack?.({ error: 'Некорректное сообщение.' });
+
+      if (type === 'room') {
+        const message = q.findMessageById.get(id);
+        if (!message || message.deleted_at || !canAccessRoom(message.room_id, userId)) return ack?.({ error: 'Сообщение не найдено.' });
+        const key = String(message.room_id);
+        const current = q.findPinnedMessage.get(type, key);
+        if (current?.message_id === id) q.deletePinnedMessage.run(type, key);
+        else q.upsertPinnedMessage.run(type, key, id, userId);
+        const pinned = pinnedPayload(type, key, userId);
+        io.to(`room:${message.room_id}`).emit('message:pinned', { chatType: type, roomId: message.room_id, pinned });
+        return ack?.({ ok: true, chatType: type, roomId: message.room_id, pinned });
+      }
+
+      const message = q.findPrivateMessageById.get(id);
+      if (!message || message.deleted_at || (message.sender_id !== userId && message.receiver_id !== userId)) return ack?.({ error: 'Сообщение не найдено.' });
+      const key = privateChatKey(message.sender_id, message.receiver_id);
+      const current = q.findPinnedMessage.get(type, key);
+      if (current?.message_id === id) q.deletePinnedMessage.run(type, key);
+      else q.upsertPinnedMessage.run(type, key, id, userId);
+      const pinned = pinnedPayload(type, key, userId);
+      const payload = { chatType: type, userIds: [message.sender_id, message.receiver_id], pinned };
+      io.to(`user:${message.sender_id}`).to(`user:${message.receiver_id}`).emit('message:pinned', payload);
+      return ack?.({ ok: true, ...payload });
+    });
+
     socket.on('private:read', ({ userId: otherUserId }, ack) => {
       const otherId = Number(otherUserId);
       if (otherId === userId || !q.findUserById.get(otherId)) return ack?.({ error: 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ.' });
@@ -267,8 +297,14 @@ function registerSocket(io) {
         if (!message || !canAccessRoom(message.room_id, userId)) return ack?.({ error: 'Сообщение не найдено.' });
         if (mode === 'all') {
           if (message.user_id !== userId) return ack?.({ error: 'Можно удалить у всех только своё сообщение.' });
+          const pinKey = String(message.room_id);
+          const currentPin = q.findPinnedMessage.get('room', pinKey);
           q.deleteRoomMessageForAll.run(userId, id);
           io.to(`room:${message.room_id}`).emit('message:removed', { chatType: 'room', messageId: id, roomId: message.room_id });
+          if (currentPin?.message_id === id) {
+            q.deletePinnedMessage.run('room', pinKey);
+            io.to(`room:${message.room_id}`).emit('message:pinned', { chatType: 'room', roomId: message.room_id, pinned: null });
+          }
           return ack?.({ ok: true });
         }
         q.hideMessageForUser.run(userId, 'room', id);
@@ -280,8 +316,14 @@ function registerSocket(io) {
         if (!message || (message.sender_id !== userId && message.receiver_id !== userId)) return ack?.({ error: 'Сообщение не найдено.' });
         if (mode === 'all') {
           if (message.sender_id !== userId) return ack?.({ error: 'Можно удалить у всех только своё сообщение.' });
+          const pinKey = privateChatKey(message.sender_id, message.receiver_id);
+          const currentPin = q.findPinnedMessage.get('private', pinKey);
           q.deletePrivateMessageForAll.run(userId, id);
           io.to(`user:${message.sender_id}`).to(`user:${message.receiver_id}`).emit('message:removed', { chatType: 'private', messageId: id });
+          if (currentPin?.message_id === id) {
+            q.deletePinnedMessage.run('private', pinKey);
+            io.to(`user:${message.sender_id}`).to(`user:${message.receiver_id}`).emit('message:pinned', { chatType: 'private', userIds: [message.sender_id, message.receiver_id], pinned: null });
+          }
           return ack?.({ ok: true });
         }
         q.hideMessageForUser.run(userId, 'private', id);

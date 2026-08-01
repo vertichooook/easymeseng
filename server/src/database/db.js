@@ -120,6 +120,16 @@ function initDb() {
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS pinned_messages (
+      chat_type TEXT NOT NULL CHECK (chat_type IN ('room', 'private')),
+      chat_key TEXT NOT NULL,
+      message_id INTEGER NOT NULL,
+      pinned_by INTEGER,
+      pinned_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (chat_type, chat_key),
+      FOREIGN KEY (pinned_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+
     CREATE TABLE IF NOT EXISTS push_subscriptions (
       endpoint TEXT PRIMARY KEY,
       user_id INTEGER NOT NULL,

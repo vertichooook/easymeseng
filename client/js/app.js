@@ -5,6 +5,7 @@ const state = {
   users: [],
   onlineIds: new Set(),
   unread: new Map(),
+  pinned: null,
   chat: { type: 'room', id: 1, title: 'general' },
   replyTo: null,
   contextMessage: null,
@@ -41,6 +42,7 @@ const el = {
   title: document.querySelector('#chatTitle'),
   chatAvatar: document.querySelector('#chatAvatar'),
   chatHeaderButton: document.querySelector('#chatHeaderButton'),
+  pinnedBar: document.querySelector('#pinnedBar'),
   status: document.querySelector('#connectionStatus'),
   form: document.querySelector('#messageForm'),
   input: document.querySelector('#messageInput'),
@@ -483,6 +485,34 @@ function attachmentKind(message) {
   return 'file';
 }
 
+function messagePreview(message) {
+  if (!message) return '';
+  return String(message.body || message.attachment_name || 'Медиа').slice(0, 120);
+}
+
+function renderPinnedBar() {
+  if (!el.pinnedBar) return;
+  const pinned = state.pinned?.message;
+  if (!pinned) {
+    el.pinnedBar.hidden = true;
+    el.pinnedBar.innerHTML = '';
+    return;
+  }
+  const author = state.pinned.chat_type === 'room'
+    ? pinned.display_name || pinned.username
+    : pinned.sender_display_name || pinned.sender_username;
+  el.pinnedBar.hidden = false;
+  el.pinnedBar.innerHTML = `
+    <span class="pin-icon"></span>
+    <span><strong>Закреплено</strong><small>${escapeHtml(author || '')}: ${escapeHtml(messagePreview(pinned))}</small></span>
+  `;
+}
+
+function applyPinned(pinned) {
+  state.pinned = pinned || null;
+  renderPinnedBar();
+}
+
 function reactionsHtml(message) {
   const counts = message.reactions || {};
   const entries = Object.entries(reactionIcons).filter(([key]) => counts[key] || message.my_reaction === key);
@@ -536,11 +566,12 @@ function renderMessage(message, type = state.chat.type) {
     ? { username: message.username, display_name: message.display_name, avatar_url: message.avatar_url }
     : { username: message.sender_username, display_name: message.sender_display_name, avatar_url: message.sender_avatar_url };
   const mentioned = message.body && message.body.toLowerCase().includes(`@${state.me.username}`);
+  const pinned = state.pinned?.message_id === message.id && state.pinned?.chat_type === type;
   const statusHtml = type === 'private' && mine
     ? `<span class="message-status ${message.read_at ? 'read' : 'delivered'}" title="${message.read_at ? 'Прочитано' : 'Доставлено'}">${message.read_at ? '✓✓' : '✓'}</span>`
     : '';
   return `
-    <article class="message ${mine ? 'mine' : ''} ${mentioned ? 'mentioned' : ''}" data-message-id="${message.id}" data-message-type="${type}">
+    <article class="message ${mine ? 'mine' : ''} ${mentioned ? 'mentioned' : ''} ${pinned ? 'is-pinned' : ''}" data-message-id="${message.id}" data-message-type="${type}">
       ${avatar(authorUser, 'small')}
       <div class="message-content">
         <div class="meta"><strong>${escapeHtml(displayName(authorUser))}</strong><time>${formatTime(message.created_at)}</time>${statusHtml}</div>
@@ -571,6 +602,21 @@ function updateMessageReactions(event) {
         <b>${event.reactions?.[key] || 1}</b>
       </button>
     `).join('');
+}
+
+function updatePinnedMessage(event) {
+  const matchesRoom = event.chatType === 'room' && state.chat.type === 'room' && state.chat.id === event.roomId;
+  const matchesPrivate = event.chatType === 'private'
+    && state.chat.type === 'private'
+    && Array.isArray(event.userIds)
+    && event.userIds.includes(state.me.id)
+    && event.userIds.includes(state.chat.id);
+  if (!matchesRoom && !matchesPrivate) return;
+  applyPinned(event.pinned);
+  document.querySelectorAll('.message.is-pinned').forEach((item) => item.classList.remove('is-pinned'));
+  if (event.pinned?.message_id) {
+    document.querySelector(`[data-message-type="${event.chatType}"][data-message-id="${event.pinned.message_id}"]`)?.classList.add('is-pinned');
+  }
 }
 
 function reactToMessage(message, reaction = getDefaultReaction()) {
@@ -670,6 +716,7 @@ function updateHeaderStatus() {
 
 function showEmptyChat() {
   state.chat = { type: 'empty', id: null, title: '' };
+  applyPinned(null);
   state.replyTo = null;
   updateReplyBar();
   renderTyping();
@@ -697,6 +744,7 @@ async function openRoom(room) {
   updateHeaderStatus();
   renderLists();
   const data = await api(`/api/rooms/${room.id}/messages`);
+  applyPinned(data.pinned);
   el.messages.innerHTML = data.messages.map((msg) => renderMessage(msg, 'room')).join('');
   try {
     const members = await api(`/api/rooms/${room.id}/members`);
@@ -721,6 +769,7 @@ async function openPrivate(user) {
   renderLists();
   state.socket?.emit('private:read', { userId: user.id });
   const data = await api(`/api/private/${user.id}/messages`);
+  applyPinned(data.pinned);
   el.messages.innerHTML = data.messages.map((msg) => renderMessage(msg, 'private')).join('');
   renderInspectorMembers([user, state.me].filter(Boolean));
   scheduleScrollToLatest();
@@ -949,6 +998,7 @@ function setupSocket() {
   state.socket.on('message:removed', (event) => removeMessage(event.messageId, event.chatType));
   state.socket.on('message:deleted', (event) => removeMessage(event.message?.id, event.chatType));
   state.socket.on('message:reaction', updateMessageReactions);
+  state.socket.on('message:pinned', updatePinnedMessage);
   state.socket.on('typing:update', (event) => {
     const scopedChatKey = eventTypingKey(event);
     const key = `${scopedChatKey}:${event.fromUserId || event.user.id}`;
@@ -996,6 +1046,12 @@ document.addEventListener('click', async (event) => {
   const menuAction = event.target.closest('[data-menu-action]')?.dataset.menuAction;
   if (menuAction && state.contextMessage) {
     const msg = state.contextMessage;
+    if (menuAction === 'pin') {
+      state.socket.emit('message:pin', { chatType: msg.type, messageId: msg.id }, (ack) => {
+        if (ack?.error) return toast(ack.error);
+        updatePinnedMessage(ack);
+      });
+    }
     if (menuAction === 'reply') {
       state.replyTo = { chatType: msg.type, messageId: msg.id, author: msg.author, body: msg.body.slice(0, 140) };
       updateReplyBar();
@@ -1462,6 +1518,16 @@ el.input.addEventListener('input', () => {
     typingSent = false;
     state.socket.emit('typing:stop', { chatType: state.chat.type, chatId: state.chat.id });
   }, 900);
+});
+
+el.pinnedBar?.addEventListener('click', () => {
+  const id = state.pinned?.message_id;
+  if (!id) return;
+  const message = document.querySelector(`[data-message-type="${state.chat.type}"][data-message-id="${id}"]`);
+  if (!message) return toast('Закрепленное сообщение выше в истории.');
+  message.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  message.classList.add('pin-flash');
+  setTimeout(() => message.classList.remove('pin-flash'), 900);
 });
 
 document.querySelector('#settingsButton').onclick = () => {

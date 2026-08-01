@@ -3,6 +3,7 @@ const q = require('../database/queries');
 const { requireAuth } = require('../middleware/auth');
 const { validateRoomName } = require('../utils/validators');
 const { decorateMessages } = require('../utils/reactions');
+const { pinnedPayload } = require('../utils/pins');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -40,7 +41,7 @@ router.get('/:id/messages', (req, res) => {
   if (!q.findRoomById.get(roomId)) return res.status(404).json({ error: 'Комната не найдена.' });
   if (!canAccessRoom(roomId, req.user.id)) return res.status(403).json({ error: 'Нет доступа к комнате.' });
   const rows = q.listRoomMessages.all(roomId, req.user.id, 100).reverse();
-  res.json({ messages: decorateMessages(rows, 'room', req.user.id) });
+  res.json({ messages: decorateMessages(rows, 'room', req.user.id), pinned: pinnedPayload('room', String(roomId), req.user.id) });
 });
 
 router.get('/:id/members', (req, res) => {
