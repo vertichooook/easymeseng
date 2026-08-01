@@ -31,28 +31,15 @@
   </div>
 
   <div class="app-shell">
-    <nav class="nav-rail" aria-label="Nexus">
-      <span class="logo-mark">N</span>
-      <button class="rail-button active" type="button" data-rail-action="chats" title="Chats" aria-label="Chats">
-        <span class="rail-icon rail-chat"></span>
-      </button>
-      <button class="rail-button" type="button" data-rail-action="rooms" title="Rooms" aria-label="Rooms">
-        <span class="rail-icon rail-rooms"></span>
-      </button>
-      <button class="rail-button" type="button" data-rail-action="people" title="People" aria-label="People">
-        <span class="rail-icon rail-users"></span>
-      </button>
-      <button id="settingsButton" class="rail-button rail-bottom" type="button" title="Settings" aria-label="Settings">
-        <span class="rail-icon rail-settings"></span>
-      </button>
-    </nav>
-
     <aside id="sidebar" class="sidebar">
       <div class="brand">
         <div class="brand-lockup">
           <span class="logo-mark">N</span>
           <strong>Nexus</strong>
         </div>
+        <button id="settingsButton" class="icon-button ghost settings-entry-button" type="button" title="Настройки" aria-label="Настройки">
+          <span class="rail-icon rail-settings"></span>
+        </button>
         <button id="closeSidebar" class="icon-button ghost" type="button" title="Закрыть">×</button>
       </div>
       <section class="panel-section chats-panel" data-sidebar-panel="chats">
@@ -81,10 +68,6 @@
         </label>
         <div id="peopleContactsList" class="list people-contacts"></div>
         <div id="peopleSearchResults" class="list people-results"></div>
-      </section>
-      <section class="profile-mini">
-        <button id="profileButton" type="button"></button>
-        <button id="logoutButton" type="button">Выйти</button>
       </section>
     </aside>
 
@@ -156,14 +139,21 @@
   </dialog>
 
   <dialog id="settingsModal">
-    <div class="modal-form">
+    <div class="modal-form settings-profile-form">
       <h2>Настройки Nexus</h2>
+      <button id="profileAvatarButton" class="profile-avatar-button" type="button" title="Сменить аватарку"></button>
+      <input id="avatarInput" type="file" accept="image/*" hidden>
+      <label>Имя<input id="settingsDisplayName" name="display_name" required minlength="2" maxlength="48"></label>
+      <label>Username<input id="settingsProfileUsername" name="username" required minlength="3" maxlength="32"></label>
       <button id="themeButton" type="button">Переключить тему</button>
       <button id="notifyButton" type="button">Разрешить уведомления</button>
       <button id="copyUsernameButton" type="button">Скопировать username</button>
       <button id="adminOpenButton" type="button">Администрирование</button>
       <p class="muted-text" id="settingsUsername"></p>
-      <button id="closeSettings" type="button">Закрыть</button>
+      <menu class="settings-footer">
+        <button id="closeSettings" type="button">Закрыть</button>
+        <button id="settingsLogoutButton" class="danger-fill" type="button">Выйти</button>
+      </menu>
     </div>
   </dialog>
 
@@ -223,20 +213,6 @@
       <menu>
         <button value="cancel" type="button" id="cancelRoom">Отмена</button>
         <button type="submit">Создать</button>
-      </menu>
-    </form>
-  </dialog>
-
-  <dialog id="profileModal">
-    <form id="profileForm" class="modal-form">
-      <h2>Профиль</h2>
-      <div class="avatar-preview" id="profileAvatar"></div>
-      <label>Имя<input name="display_name" required minlength="2" maxlength="48"></label>
-      <label>Username<input name="username" required minlength="3" maxlength="32"></label>
-      <input id="avatarInput" type="file" accept="image/*">
-      <menu>
-        <button id="closeProfile" type="button">Закрыть</button>
-        <button type="submit">Сохранить</button>
       </menu>
     </form>
   </dialog>

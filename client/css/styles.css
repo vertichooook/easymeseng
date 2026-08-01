@@ -2552,3 +2552,127 @@ dialog[open] { animation: modalIn 0.16s ease both; }
     padding-top: 10px;
   }
 }
+
+/* Profile/settings merge and cleaner chat composer */
+.nav-rail,
+.profile-mini {
+  display: none !important;
+}
+
+.app-shell {
+  grid-template-columns: 326px minmax(0, 1fr) 286px;
+}
+
+.sidebar {
+  padding-bottom: 0 !important;
+}
+
+.brand {
+  gap: 8px;
+}
+
+.settings-entry-button {
+  display: grid !important;
+  margin-left: auto;
+}
+
+.settings-entry-button::before,
+.settings-entry-button::after {
+  content: none !important;
+}
+
+.settings-profile-form {
+  min-width: min(420px, 92vw);
+}
+
+.profile-avatar-button {
+  width: 104px;
+  height: 104px;
+  padding: 0;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  border-radius: 32px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+}
+
+.profile-avatar-button:hover {
+  background: var(--panel-2);
+}
+
+.profile-avatar-button .avatar {
+  width: 96px;
+  height: 96px;
+  font-size: 28px;
+}
+
+.settings-footer {
+  margin-top: 8px;
+  padding-top: 12px;
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.settings-footer button {
+  flex: 1;
+}
+
+.composer {
+  align-items: flex-end;
+}
+
+.composer textarea {
+  overflow-y: hidden;
+  resize: none;
+}
+
+.composer:not(.has-text) #sendButton {
+  display: none !important;
+}
+
+.composer.has-text #recordButton {
+  display: none !important;
+}
+
+.composer.has-text #sendButton {
+  display: grid !important;
+}
+
+@media (max-width: 1120px) {
+  .app-shell {
+    grid-template-columns: 326px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-entry-button {
+    margin-left: auto;
+  }
+
+  .composer textarea {
+    min-height: 38px;
+    height: 38px;
+  }
+
+  .composer:not(.has-text) textarea {
+    padding-right: 48px;
+  }
+
+  .composer.has-text textarea {
+    padding-right: 48px;
+  }
+
+  .composer.has-text #sendButton,
+  .composer:not(.has-text) #recordButton {
+    position: absolute;
+    right: 10px;
+    bottom: max(7px, env(safe-area-inset-bottom));
+  }
+}

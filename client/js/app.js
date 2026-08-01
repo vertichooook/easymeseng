@@ -50,6 +50,7 @@ const el = {
   fileInput: document.querySelector('#fileInput'),
   attachButton: document.querySelector('#attachButton'),
   recordButton: document.querySelector('#recordButton'),
+  sendButton: document.querySelector('#sendButton'),
   replyBar: document.querySelector('#replyBar'),
   contextMenu: document.querySelector('#contextMenu'),
   deleteModal: document.querySelector('#deleteModal'),
@@ -66,6 +67,9 @@ const el = {
   cameraModeButton: null,
   loadingScreen: document.querySelector('#loadingScreen'),
   settingsModal: document.querySelector('#settingsModal'),
+  profileAvatarButton: document.querySelector('#profileAvatarButton'),
+  settingsDisplayName: document.querySelector('#settingsDisplayName'),
+  settingsProfileUsername: document.querySelector('#settingsProfileUsername'),
   inspectorAvatar: document.querySelector('#inspectorAvatar'),
   inspectorTitle: document.querySelector('#inspectorTitle'),
   inspectorMeta: document.querySelector('#inspectorMeta'),
@@ -375,6 +379,31 @@ function currentChatMuted() {
 
 function saveLastChat(type, id) {
   if (type && id) localStorage.setItem('nexus:lastChat', `${type}:${id}`);
+}
+
+function renderSettingsProfile() {
+  if (!state.me) return;
+  if (el.profileAvatarButton) el.profileAvatarButton.innerHTML = avatar(state.me, 'large');
+  if (el.settingsDisplayName) el.settingsDisplayName.value = state.me.display_name || '';
+  if (el.settingsProfileUsername) el.settingsProfileUsername.value = state.me.username || '';
+  document.querySelector('#settingsUsername').textContent = `Ваш username: @${state.me.username}`;
+}
+
+function applyMe(user) {
+  state.me = user;
+  state.users = state.users.map((item) => item.id === user.id ? { ...item, ...user } : item);
+  renderSettingsProfile();
+  renderLists();
+  setHeader();
+}
+
+async function saveProfile(updates) {
+  const data = await api('/api/users/me', {
+    method: 'PATCH',
+    body: JSON.stringify(updates)
+  });
+  applyMe(data.user);
+  return data.user;
 }
 
 function findLastChat() {
@@ -904,6 +933,7 @@ function sendMessageAsync(body, attachment = null) {
       }
       if (ack?.message && !hasRenderedMessage(state.chat.type, ack.message.id)) addMessage(ack.message, state.chat.type);
       el.input.value = '';
+      updateComposerMode();
       state.replyTo = null;
       updateReplyBar();
       resolve(ack?.message || null);
@@ -979,9 +1009,11 @@ function setupSocket() {
     if (state.chat.type === 'room' && state.chat.id === event.roomId) openRoom(state.rooms[0]);
   });
   state.socket.on('user:updated', (user) => {
-    if (state.me.id === user.id) state.me = user;
+    if (state.me.id === user.id) {
+      applyMe(user);
+      return;
+    }
     state.users = state.users.map((item) => item.id === user.id ? { ...item, ...user } : item);
-    document.querySelector('#profileButton').innerHTML = `${avatar(state.me, 'small')}<span>${escapeHtml(displayName(state.me))}</span>`;
     if (state.chat.type === 'private' && state.chat.id === user.id) setHeader();
     renderLists();
   });
@@ -1248,12 +1280,28 @@ el.input.addEventListener('keydown', (event) => {
     el.form.requestSubmit();
   }
 });
+
+function updateComposerMode() {
+  el.input.style.height = 'auto';
+  const maxHeight = window.innerWidth <= 760 ? 118 : 150;
+  el.input.style.height = `${Math.min(el.input.scrollHeight, maxHeight)}px`;
+  el.input.style.overflowY = el.input.scrollHeight > maxHeight ? 'auto' : 'hidden';
+  const hasText = Boolean(el.input.value.trim());
+  el.form.classList.toggle('has-text', hasText);
+  if (el.sendButton) el.sendButton.hidden = !hasText;
+  if (el.recordButton) el.recordButton.hidden = hasText;
+}
+
+el.input.addEventListener('input', updateComposerMode);
+window.addEventListener('resize', updateComposerMode);
+
 el.form.addEventListener('submit', (event) => {
   event.preventDefault();
   const body = el.input.value.trim();
   if (!body) return toast('Сообщение не может быть пустым.');
   if (body.length > 1000) return toast('Сообщение слишком длинное.');
   sendMessage(body);
+  updateComposerMode();
 });
 el.attachButton.onclick = () => el.fileInput.click();
 el.fileInput.addEventListener('change', async () => {
@@ -1554,10 +1602,53 @@ el.pinnedBar?.addEventListener('click', () => {
 });
 
 document.querySelector('#settingsButton').onclick = () => {
+  renderSettingsProfile();
   document.querySelector('#settingsUsername').textContent = `Ваш username: @${state.me.username}`;
   el.settingsModal.showModal();
 };
 document.querySelector('#closeSettings').onclick = () => el.settingsModal.close();
+document.querySelector('#settingsLogoutButton')?.addEventListener('click', async () => {
+  await api('/api/auth/logout', { method: 'POST' });
+  location.href = '/login.html';
+});
+el.profileAvatarButton?.addEventListener('click', () => document.querySelector('#avatarInput')?.click());
+document.querySelector('#avatarInput')?.addEventListener('change', async () => {
+  const input = document.querySelector('#avatarInput');
+  const file = input.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/') && !/\.(jpe?g|png|webp|gif)$/i.test(file.name)) {
+    input.value = '';
+    return toast('Для аватарки выберите изображение.');
+  }
+  const previousAvatar = state.me.avatar_url;
+  const preview = URL.createObjectURL(file);
+  if (el.profileAvatarButton) el.profileAvatarButton.innerHTML = `<span class="avatar large"><img src="${preview}" alt=""></span>`;
+  try {
+    const uploaded = await uploadFile(file);
+    await saveProfile({ avatar_url: uploaded.url });
+    toast('Аватарка обновлена.');
+  } catch (error) {
+    state.me.avatar_url = previousAvatar;
+    renderSettingsProfile();
+    toast(error.message);
+  } finally {
+    input.value = '';
+  }
+});
+async function autosaveProfileField(field, key) {
+  const value = field.value.trim();
+  const current = key === 'display_name' ? state.me.display_name || '' : state.me.username || '';
+  if (!value || value === current) return;
+  try {
+    await saveProfile({ [key]: value });
+    toast('Профиль обновлен.');
+  } catch (error) {
+    field.value = current;
+    toast(error.message);
+  }
+}
+el.settingsDisplayName?.addEventListener('change', () => autosaveProfileField(el.settingsDisplayName, 'display_name'));
+el.settingsProfileUsername?.addEventListener('change', () => autosaveProfileField(el.settingsProfileUsername, 'username'));
 document.querySelector('#themeButton').onclick = () => {
   document.body.classList.toggle('dark');
   localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
@@ -1834,48 +1925,6 @@ document.querySelector('#roomForm').addEventListener('submit', async (event) => 
   } catch (error) { toast(error.message); }
 });
 
-document.querySelector('#logoutButton').onclick = async () => {
-  await api('/api/auth/logout', { method: 'POST' });
-  location.href = '/login.html';
-};
-document.querySelector('#profileButton').onclick = () => {
-  document.querySelector('#profileForm').display_name.value = state.me.display_name || '';
-  document.querySelector('#profileForm').username.value = state.me.username;
-  document.querySelector('#avatarInput').value = '';
-  document.querySelector('#profileAvatar').innerHTML = avatar(state.me, 'large');
-  document.querySelector('#profileModal').showModal();
-};
-document.querySelector('#closeProfile').onclick = () => document.querySelector('#profileModal').close();
-document.querySelector('#avatarInput').addEventListener('change', () => {
-  const file = document.querySelector('#avatarInput').files[0];
-  if (!file) return;
-  if (!file.type.startsWith('image/') && !/\.(jpe?g|png|webp|gif)$/i.test(file.name)) {
-    document.querySelector('#avatarInput').value = '';
-    toast('Для аватарки выберите изображение.');
-    return;
-  }
-  const url = URL.createObjectURL(file);
-  document.querySelector('#profileAvatar').innerHTML = `<span class="avatar large"><img src="${url}" alt=""></span>`;
-});
-document.querySelector('#profileForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
-  try {
-    const form = event.target;
-    let avatarUrl = state.me.avatar_url || null;
-    if (document.querySelector('#avatarInput').files[0]) avatarUrl = (await uploadFile(document.querySelector('#avatarInput').files[0])).url;
-    const data = await api('/api/users/me', {
-      method: 'PATCH',
-      body: JSON.stringify({ display_name: form.display_name.value, username: form.username.value, avatar_url: avatarUrl })
-    });
-    state.me = data.user;
-    if (avatarUrl) state.me.avatar_url = avatarUrl;
-    state.users = state.users.map((user) => user.id === state.me.id ? { ...user, ...state.me } : user);
-    document.querySelector('#profileButton').innerHTML = `${avatar(state.me, 'small')}<span>${escapeHtml(displayName(state.me))}</span>`;
-    renderLists();
-    document.querySelector('#profileModal').close();
-    toast('Профиль обновлён.');
-  } catch (error) { toast(error.message); }
-});
 document.querySelector('#openSidebar').onclick = () => setSidebarOpen(true);
 document.querySelector('#closeSidebar').onclick = () => setSidebarOpen(false);
 
@@ -1884,7 +1933,7 @@ document.querySelector('#closeSidebar').onclick = () => setSidebarOpen(false);
     if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark');
     const me = await api('/api/auth/me');
     state.me = me.user;
-    document.querySelector('#profileButton').innerHTML = `${avatar(state.me, 'small')}<span>${escapeHtml(displayName(state.me))}</span>`;
+    renderSettingsProfile();
     await refreshData();
     setupSocket();
     const lastChat = findLastChat();
@@ -1895,7 +1944,8 @@ document.querySelector('#closeSidebar').onclick = () => setSidebarOpen(false);
       await openRoom(lastChat?.item || state.rooms[0]);
       setSidebarMode('chats');
     }
-    if (!state.me.display_name) document.querySelector('#profileButton').click();
+    updateComposerMode();
+    if (!state.me.display_name) document.querySelector('#settingsButton').click();
     el.loadingScreen.classList.add('done');
     showChangelogIfNeeded();
   } catch (_error) {
