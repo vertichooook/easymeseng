@@ -1069,41 +1069,62 @@ function isMobileDevice() {
   return innerWidth < 760 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
 }
 
-function startDesktopRingtone() {
+function startDesktopCallTone(mode = 'incoming') {
   if (isMobileDevice() || state.ringtone) return;
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
     const context = new AudioContext();
-    const gain = context.createGain();
-    gain.gain.value = 0;
-    gain.connect(context.destination);
-    const oscillators = [440, 554].map((frequency) => {
-      const oscillator = context.createOscillator();
-      oscillator.type = 'sine';
-      oscillator.frequency.value = frequency;
-      oscillator.connect(gain);
-      oscillator.start();
-      return oscillator;
-    });
-    let on = false;
+    const master = context.createGain();
+    master.gain.value = 0.0;
+    master.connect(context.destination);
+    const melody = mode === 'outgoing'
+      ? [{ f: 420, d: 0.22 }, { f: 0, d: 2.2 }]
+      : [
+        { f: 523.25, d: 0.12 },
+        { f: 659.25, d: 0.12 },
+        { f: 783.99, d: 0.14 },
+        { f: 1046.5, d: 0.18 },
+        { f: 0, d: 0.46 },
+        { f: 783.99, d: 0.14 },
+        { f: 659.25, d: 0.12 },
+        { f: 880, d: 0.18 },
+        { f: 0, d: 0.56 }
+      ];
+    let index = 0;
     const tick = () => {
-      on = !on;
-      gain.gain.setTargetAtTime(on ? 0.055 : 0.0, context.currentTime, 0.018);
+      const note = melody[index % melody.length];
+      index += 1;
+      master.gain.cancelScheduledValues(context.currentTime);
+      master.gain.setTargetAtTime(0, context.currentTime, 0.01);
+      if (note.f) {
+        const oscillator = context.createOscillator();
+        const noteGain = context.createGain();
+        oscillator.type = mode === 'outgoing' ? 'sine' : 'triangle';
+        oscillator.frequency.value = note.f;
+        noteGain.gain.value = mode === 'outgoing' ? 0.07 : 0.045;
+        oscillator.connect(noteGain);
+        noteGain.connect(master);
+        master.gain.setTargetAtTime(1, context.currentTime + 0.01, 0.012);
+        master.gain.setTargetAtTime(0, context.currentTime + Math.max(0.05, note.d - 0.04), 0.018);
+        oscillator.start();
+        oscillator.stop(context.currentTime + note.d);
+      }
+      clearTimeout(state.ringtone?.timeout);
+      if (state.ringtone) state.ringtone.timeout = setTimeout(tick, note.d * 1000);
     };
+    state.ringtone = { context, master, timeout: null };
+    context.resume?.().catch(() => {});
     tick();
-    const interval = setInterval(tick, 700);
-    state.ringtone = { context, gain, oscillators, interval };
   } catch (_error) {}
 }
 
 function stopDesktopRingtone() {
   const ringtone = state.ringtone;
   if (!ringtone) return;
-  clearInterval(ringtone.interval);
+  clearTimeout(ringtone.timeout);
   try {
-    ringtone.gain.gain.setTargetAtTime(0, ringtone.context.currentTime, 0.01);
-    ringtone.oscillators.forEach((oscillator) => oscillator.stop(ringtone.context.currentTime + 0.04));
+    ringtone.master.gain.setTargetAtTime(0, ringtone.context.currentTime, 0.01);
     setTimeout(() => ringtone.context.close().catch(() => {}), 80);
   } catch (_error) {}
   state.ringtone = null;
@@ -1268,6 +1289,7 @@ async function startCall(kind) {
   state.call = { state: 'outgoing', kind, peerId: user.id, user, muted: false, cameraOff: false, pendingCandidates: [] };
   setCallStatus('Вызываем...');
   renderCallOverlay();
+  startDesktopCallTone('outgoing');
   state.socket.emit('call:invite', { to: user.id, kind }, async (ack) => {
     if (ack?.error) {
       cleanupCall();
@@ -1435,11 +1457,12 @@ function setupSocket() {
     };
     setCallStatus('Входящий звонок');
     renderCallOverlay();
-    startDesktopRingtone();
+    startDesktopCallTone('incoming');
     showIncomingCallNotification(event);
   });
   state.socket.on('call:accepted', async (event) => {
     if (!state.call || state.call.callId !== event.callId) return;
+    stopDesktopRingtone();
     state.call.state = 'connecting';
     await createAndSendOffer();
   });
