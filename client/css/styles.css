@@ -2789,10 +2789,25 @@ dialog[open] { animation: modalIn 0.16s ease both; }
     pointer-events: none;
   }
 
+  body.sidebar-swiping .sidebar {
+    transition: none !important;
+  }
+
+  body.sidebar-swiping .chat {
+    transform: translateX(var(--chat-swipe-x, 0));
+    transition: none !important;
+  }
+
   .sidebar .list-item.active,
   .sidebar .list-item.active:hover {
     background: transparent !important;
     border-color: transparent !important;
     box-shadow: none !important;
   }
+}
+
+body.message-pressing .message,
+body.message-pressing .message * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
 }

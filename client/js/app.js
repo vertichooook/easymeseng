@@ -158,15 +158,38 @@ function setConnectionStatus(status) {
   document.body.dataset.connection = status;
 }
 
-window.addEventListener('focus', () => {
+function resetTransientUi() {
+  clearTimeout(state.longPressTimer);
+  state.longPressTriggered = false;
+  state.edgeSwipe = null;
+  document.body.classList.remove('message-pressing', 'sidebar-swiping');
+  document.body.style.removeProperty('--chat-swipe-x');
+  el.sidebar.style.transform = '';
+  el.sidebar.style.boxShadow = '';
+  if (!document.activeElement?.matches?.('input, textarea')) {
+    document.body.classList.remove('keyboard-open');
+  }
+  if (state.me) el.loadingScreen?.classList.add('done');
+  setAppHeight();
+  updateComposerMode();
+}
+
+function recoverFromWake() {
+  resetTransientUi();
+  if (state.socket && !state.socket.connected) state.socket.connect();
   markCurrentPrivateRead();
   sendActiveState();
+}
+
+window.addEventListener('focus', () => {
+  recoverFromWake();
 });
 window.addEventListener('blur', sendActiveState);
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) markCurrentPrivateRead();
+  if (!document.hidden) recoverFromWake();
   sendActiveState();
 });
+window.addEventListener('pageshow', recoverFromWake);
 
 async function api(path, options = {}) {
   const controller = new AbortController();
@@ -496,6 +519,10 @@ function setSidebarMode(mode) {
 }
 
 function setSidebarOpen(open) {
+  el.sidebar.style.transform = '';
+  el.sidebar.style.boxShadow = '';
+  document.body.style.removeProperty('--chat-swipe-x');
+  document.body.classList.remove('sidebar-swiping');
   el.sidebar.classList.toggle('open', open);
   document.body.classList.toggle('sidebar-open', open);
 }
@@ -1059,6 +1086,7 @@ function setupSocket() {
 }
 
 function openContextMenu(messageEl, x, y) {
+  document.body.classList.remove('message-pressing');
   state.contextMessage = {
     id: Number(messageEl.dataset.messageId),
     type: messageEl.dataset.messageType,
@@ -1074,8 +1102,11 @@ function openContextMenu(messageEl, x, y) {
       </div>
     `);
   }
-  el.contextMenu.style.left = `${Math.min(x, innerWidth - 244)}px`;
-  el.contextMenu.style.top = `${Math.min(y, innerHeight - 210)}px`;
+  const rect = messageEl.getBoundingClientRect();
+  const left = Number.isFinite(x) ? x : rect.left + 20;
+  const preferredTop = rect.bottom + 8;
+  el.contextMenu.style.left = `${Math.max(8, Math.min(left, innerWidth - 252))}px`;
+  el.contextMenu.style.top = `${Math.max(8, Math.min(preferredTop, innerHeight - 210))}px`;
   el.contextMenu.hidden = false;
 }
 
@@ -1101,6 +1132,15 @@ document.addEventListener('click', async (event) => {
         if (ack?.error) return toast(ack.error);
         updatePinnedMessage(ack);
       });
+    }
+    if (menuAction === 'copy') {
+      try {
+        await navigator.clipboard.writeText(msg.body || '');
+        toast('Сообщение скопировано.');
+        el.contextMenu.hidden = true;
+      } catch (_error) {
+        toast('Не удалось скопировать сообщение.');
+      }
     }
     if (menuAction === 'reply') {
       state.replyTo = { chatType: msg.type, messageId: msg.id, author: msg.author, body: msg.body.slice(0, 140) };
@@ -1144,6 +1184,7 @@ el.messages.addEventListener('touchstart', (event) => {
   const message = event.target.closest('[data-message-id]');
   if (!message) return;
   state.longPressTriggered = false;
+  document.body.classList.add('message-pressing');
   state.longPressTimer = setTimeout(() => {
     state.longPressTriggered = true;
     openContextMenu(message, event.touches[0].clientX, event.touches[0].clientY);
@@ -1151,6 +1192,7 @@ el.messages.addEventListener('touchstart', (event) => {
 }, { passive: true });
 el.messages.addEventListener('touchend', (event) => {
   clearTimeout(state.longPressTimer);
+  document.body.classList.remove('message-pressing');
   if (state.longPressTriggered) return;
   if (event.target.closest('[data-react], .media-player, .message-action, [data-player-progress]')) return;
   const message = event.target.closest('[data-message-id]');
@@ -1172,6 +1214,7 @@ el.messages.addEventListener('touchend', (event) => {
 ['touchmove', 'touchcancel'].forEach((name) => el.messages.addEventListener(name, () => {
   clearTimeout(state.longPressTimer);
   state.longPressTriggered = false;
+  document.body.classList.remove('message-pressing');
 }, { passive: true }));
 
 function formatMediaTime(value) {
@@ -1925,9 +1968,11 @@ document.querySelector('#closeSidebar').onclick = () => setSidebarOpen(false);
 
 window.addEventListener('touchstart', (event) => {
   if (window.innerWidth > 760 || document.body.classList.contains('sidebar-open')) return;
+  if (!event.target.closest('.chat')) return;
+  if (event.target.closest('input, textarea, button, a, dialog, #contextMenu, .media-player, [data-player-progress]')) return;
   const touch = event.touches[0];
-  if (!touch || touch.clientX > 44) return;
-  state.edgeSwipe = { x: touch.clientX, y: touch.clientY };
+  if (!touch) return;
+  state.edgeSwipe = { x: touch.clientX, y: touch.clientY, active: false };
 }, { passive: true });
 
 window.addEventListener('touchmove', (event) => {
@@ -1936,22 +1981,52 @@ window.addEventListener('touchmove', (event) => {
   if (!touch) return;
   const dx = touch.clientX - state.edgeSwipe.x;
   const dy = Math.abs(touch.clientY - state.edgeSwipe.y);
-  if (dx > 58 && dy < 56) {
+  if (dx < 0 || dy > 78) {
     state.edgeSwipe = null;
-    setSidebarOpen(true);
+    document.body.classList.remove('sidebar-swiping');
+    el.sidebar.style.transform = '';
+    el.sidebar.style.boxShadow = '';
+    document.body.style.removeProperty('--chat-swipe-x');
+    return;
+  }
+  if (dx > 12) {
+    state.edgeSwipe.active = true;
+    const width = Math.min(el.sidebar.offsetWidth || 330, innerWidth * 0.88);
+    const progress = Math.min(dx, width);
+    document.body.classList.add('sidebar-swiping');
+    document.body.style.setProperty('--chat-swipe-x', `${Math.min(progress * 0.18, 28)}px`);
+    el.sidebar.style.transform = `translateX(${Math.min(0, progress - width)}px)`;
+    el.sidebar.style.boxShadow = `0 0 0 100vw rgb(0 0 0 / ${Math.min(0.42, progress / width * 0.42)})`;
   }
 }, { passive: true });
 
 window.addEventListener('touchend', (event) => {
   if (!state.edgeSwipe || window.innerWidth > 760) {
     state.edgeSwipe = null;
+    document.body.classList.remove('sidebar-swiping');
     return;
   }
   const touch = event.changedTouches[0];
   const dx = touch.clientX - state.edgeSwipe.x;
   const dy = Math.abs(touch.clientY - state.edgeSwipe.y);
+  const shouldOpen = state.edgeSwipe.active && dx > Math.min(130, innerWidth * 0.32) && dy < 90;
   state.edgeSwipe = null;
-  if (dx > 72 && dy < 70) setSidebarOpen(true);
+  if (shouldOpen) {
+    setSidebarOpen(true);
+    return;
+  }
+  document.body.classList.remove('sidebar-swiping');
+  document.body.style.removeProperty('--chat-swipe-x');
+  el.sidebar.style.transform = '';
+  el.sidebar.style.boxShadow = '';
+}, { passive: true });
+
+window.addEventListener('touchcancel', () => {
+  state.edgeSwipe = null;
+  document.body.classList.remove('sidebar-swiping');
+  document.body.style.removeProperty('--chat-swipe-x');
+  el.sidebar.style.transform = '';
+  el.sidebar.style.boxShadow = '';
 }, { passive: true });
 
 (async function boot() {
