@@ -2788,4 +2788,11 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   body.sidebar-open .chat {
     pointer-events: none;
   }
+
+  .sidebar .list-item.active,
+  .sidebar .list-item.active:hover {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
 }
