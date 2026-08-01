@@ -4,6 +4,7 @@ const config = require('../config');
 const q = require('../database/queries');
 const { COOKIE_NAME } = require('../middleware/auth');
 const push = require('../utils/push');
+const calls = require('../utils/calls');
 const { allowedReactions, decorateMessage, reactionPayload } = require('../utils/reactions');
 const { privateChatKey, pinnedPayload } = require('../utils/pins');
 
@@ -13,6 +14,7 @@ const callTimers = new Map();
 
 const publicUser = (user) => ({ id: user.id, username: user.username, display_name: user.display_name, avatar_url: user.avatar_url || null });
 const onlinePayload = () => Array.from(online.values()).map((entry) => publicUser(entry.user));
+const CALL_TIMEOUT_MS = 30000;
 
 function parseSignedCookie(socket) {
   const parsed = cookie.parse(socket.handshake.headers.cookie || '');
@@ -140,6 +142,36 @@ function relayCall(io, socket, eventName, payload = {}, ack) {
   return ack?.({ ok: true });
 }
 
+function callBody(call, status) {
+  return `__nexus_call__${JSON.stringify({
+    callId: call.callId,
+    callerId: call.callerId,
+    receiverId: call.receiverId,
+    kind: call.kind,
+    status
+  })}`;
+}
+
+function emitCallLog(io, call, status) {
+  if (!call || call.logged) return null;
+  call.logged = true;
+  const result = q.insertPrivateMessage.run(call.callerId, call.receiverId, callBody(call, status), null, null, null, null, null, null, null, null);
+  const saved = decorateMessage(q.findPrivateMessageById.get(result.lastInsertRowid), 'private', null);
+  emitPrivate(io, call.callerId, call.receiverId, saved);
+  return saved;
+}
+
+function finishCall(io, callId, status) {
+  const call = calls.getCall(callId);
+  if (!call) return null;
+  clearTimeout(callTimers.get(callId));
+  callTimers.delete(callId);
+  const finalStatus = status === 'completed' && call.status !== 'accepted' ? 'missed' : status;
+  const saved = emitCallLog(io, call, finalStatus);
+  calls.deleteCall(callId);
+  return { call, saved };
+}
+
 function registerSocket(io) {
   io.use(socketAuth);
 
@@ -227,6 +259,7 @@ function registerSocket(io) {
       if (!canSignalCall(userId, targetId)) return ack?.({ error: 'Пользователь не найден.' });
       const callId = callIdFor(userId, targetId);
       const callKind = kind === 'video' ? 'video' : 'audio';
+      calls.createCall({ callId, callerId: userId, receiverId: targetId, kind: callKind });
       io.to(`user:${targetId}`).emit('call:incoming', {
         callId,
         from: userId,
@@ -234,23 +267,38 @@ function registerSocket(io) {
         kind: callKind,
         user: publicUser(socket.user)
       });
+      if (!q.findMutedChat.get(targetId, 'user', userId)) {
+        queuePush(targetId, {
+          title: `${callKind === 'video' ? 'Видеозвонок' : 'Аудиозвонок'} от ${socket.user.display_name || socket.user.username}`,
+          body: 'Входящий звонок',
+          url: `/?chat=private-${userId}&callAction=open&callId=${encodeURIComponent(callId)}`,
+          tag: `call-${callId}`,
+          type: 'call',
+          chat: { type: 'private', id: userId },
+          call: { callId, from: userId, kind: callKind },
+          actions: [
+            { action: 'answer-call', title: 'Ответить' },
+            { action: 'reject-call', title: 'Сбросить' }
+          ]
+        });
+      }
       clearTimeout(callTimers.get(callId));
       callTimers.set(callId, setTimeout(() => {
+        finishCall(io, callId, 'missed');
         io.to(`user:${userId}`).to(`user:${targetId}`).emit('call:ended', { callId, reason: 'timeout', from: targetId });
-        callTimers.delete(callId);
-      }, 45000).unref());
+      }, CALL_TIMEOUT_MS).unref());
       return ack?.({ ok: true, callId, kind: callKind });
     });
 
     socket.on('call:accept', (payload, ack) => {
       if (payload?.callId) clearTimeout(callTimers.get(payload.callId));
       if (payload?.callId) callTimers.delete(payload.callId);
+      if (payload?.callId) calls.markCall(payload.callId, 'accepted');
       return relayCall(io, socket, 'call:accepted', payload, ack);
     });
 
     socket.on('call:reject', (payload, ack) => {
-      if (payload?.callId) clearTimeout(callTimers.get(payload.callId));
-      if (payload?.callId) callTimers.delete(payload.callId);
+      if (payload?.callId) finishCall(io, payload.callId, payload?.reason === 'busy' ? 'busy' : 'missed');
       return relayCall(io, socket, 'call:rejected', payload, ack);
     });
 
@@ -259,8 +307,7 @@ function registerSocket(io) {
     socket.on('call:ice', (payload, ack) => relayCall(io, socket, 'call:ice', payload, ack));
 
     socket.on('call:end', (payload, ack) => {
-      if (payload?.callId) clearTimeout(callTimers.get(payload.callId));
-      if (payload?.callId) callTimers.delete(payload.callId);
+      if (payload?.callId) finishCall(io, payload.callId, payload?.reason === 'media-error' ? 'failed' : 'completed');
       return relayCall(io, socket, 'call:ended', payload, ack);
     });
 

@@ -2808,6 +2808,47 @@ body.message-pressing .message * {
   -webkit-user-select: none !important;
 }
 
+.call-log-message {
+  grid-template-columns: minmax(0, auto);
+  justify-content: center;
+}
+
+.call-log-message .message-content {
+  max-width: min(520px, 90vw);
+  padding: 9px 12px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel-2) 82%, transparent);
+  border: 1px solid var(--line);
+}
+
+.call-log-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.call-log-line strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.call-log-line time {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.call-log-icon {
+  width: 15px;
+  height: 15px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-left-color: transparent;
+  border-radius: 5px 5px 9px 5px;
+  transform: rotate(45deg);
+}
+
 /* WebRTC calls */
 .call-actions {
   margin-left: auto;

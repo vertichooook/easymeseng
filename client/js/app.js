@@ -23,6 +23,7 @@ const state = {
   recordStream: null,
   cameraFacing: 'user',
   call: null,
+  ringtone: null,
   webrtcConfig: null,
   typing: new Map(),
   recorder: null,
@@ -118,6 +119,7 @@ Object.assign(el, {
 });
 
 const chatKey = (type, id) => `${type}:${id}`;
+const CALL_MESSAGE_PREFIX = '__nexus_call__';
 const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
 const displayName = (user) => user?.display_name || user?.username || user?.name || '?';
 const mediaSrc = (url) => {
@@ -467,6 +469,14 @@ async function saveProfile(updates) {
 }
 
 function findLastChat() {
+  const requestedChat = new URLSearchParams(location.search).get('chat');
+  const requestedMatch = requestedChat?.match(/^(room|private)-(\d+)$/);
+  if (requestedMatch) {
+    const [, requestedType, requestedId] = requestedMatch;
+    const id = Number(requestedId);
+    if (requestedType === 'room') return { type: 'room', item: state.rooms.find((room) => room.id === id) };
+    if (requestedType === 'private') return { type: 'private', item: state.users.find((user) => user.id === id) };
+  }
   const [type, rawId] = String(localStorage.getItem('nexus:lastChat') || '').split(':');
   const id = Number(rawId);
   if (type === 'room') return { type, item: state.rooms.find((room) => room.id === id) };
@@ -586,6 +596,29 @@ const reactionIcons = { heart: '❤️', like: '👍', fire: '🔥', cry: '😢'
 
 setupDefaultReactionSetting();
 
+function parseCallMessage(body) {
+  const value = String(body || '');
+  if (!value.startsWith(CALL_MESSAGE_PREFIX)) return null;
+  try {
+    return JSON.parse(value.slice(CALL_MESSAGE_PREFIX.length));
+  } catch (_error) {
+    return null;
+  }
+}
+
+function callMessageText(message) {
+  const call = parseCallMessage(message.body);
+  if (!call) return null;
+  const amCaller = Number(call.callerId) === state.me?.id;
+  const direction = amCaller ? 'Исходящий' : 'Входящий';
+  const kind = call.kind === 'video' ? 'видеозвонок' : 'аудиозвонок';
+  if (call.status === 'missed') return amCaller ? `Не отвеченный ${kind}` : `Пропущенный ${kind}`;
+  if (call.status === 'busy') return amCaller ? `Не отвеченный ${kind}` : `Отклоненный ${kind}`;
+  if (call.status === 'failed') return `${direction} ${kind}: не удалось соединиться`;
+  if (call.status === 'completed') return `${direction} ${kind}`;
+  return `${direction} ${kind}`;
+}
+
 function attachmentKind(message) {
   const declared = String(message.attachment_type || '').toLowerCase();
   if (['image', 'video', 'audio'].includes(declared)) return declared;
@@ -601,6 +634,8 @@ function attachmentKind(message) {
 
 function messagePreview(message) {
   if (!message) return '';
+  const callText = callMessageText(message);
+  if (callText) return callText;
   return String(message.body || message.attachment_name || 'Медиа').slice(0, 120);
 }
 
@@ -679,11 +714,21 @@ function renderMessage(message, type = state.chat.type) {
   const authorUser = type === 'room'
     ? { username: message.username, display_name: message.display_name, avatar_url: message.avatar_url }
     : { username: message.sender_username, display_name: message.sender_display_name, avatar_url: message.sender_avatar_url };
+  const callText = type === 'private' ? callMessageText(message) : null;
   const mentioned = message.body && message.body.toLowerCase().includes(`@${state.me.username}`);
   const pinned = state.pinned?.message_id === message.id && state.pinned?.chat_type === type;
   const statusHtml = type === 'private' && mine
     ? `<span class="message-status ${message.read_at ? 'read' : 'delivered'}" title="${message.read_at ? 'Прочитано' : 'Доставлено'}">${message.read_at ? '✓✓' : '✓'}</span>`
     : '';
+  if (callText) {
+    return `
+      <article class="message call-log-message ${mine ? 'mine' : ''}" data-message-id="${message.id}" data-message-type="${type}">
+        <div class="message-content">
+          <div class="call-log-line"><span class="call-log-icon"></span><strong>${escapeHtml(callText)}</strong><time>${formatTime(message.created_at)}</time></div>
+        </div>
+      </article>
+    `;
+  }
   return `
     <article class="message ${mine ? 'mine' : ''} ${mentioned ? 'mentioned' : ''} ${pinned ? 'is-pinned' : ''}" data-message-id="${message.id}" data-message-type="${type}">
       ${avatar(authorUser, 'small')}
@@ -1020,6 +1065,108 @@ function setCallStatus(text) {
   if (el.callStatus) el.callStatus.textContent = text;
 }
 
+function isMobileDevice() {
+  return innerWidth < 760 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+}
+
+function startDesktopRingtone() {
+  if (isMobileDevice() || state.ringtone) return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const context = new AudioContext();
+    const gain = context.createGain();
+    gain.gain.value = 0;
+    gain.connect(context.destination);
+    const oscillators = [440, 554].map((frequency) => {
+      const oscillator = context.createOscillator();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = frequency;
+      oscillator.connect(gain);
+      oscillator.start();
+      return oscillator;
+    });
+    let on = false;
+    const tick = () => {
+      on = !on;
+      gain.gain.setTargetAtTime(on ? 0.055 : 0.0, context.currentTime, 0.018);
+    };
+    tick();
+    const interval = setInterval(tick, 700);
+    state.ringtone = { context, gain, oscillators, interval };
+  } catch (_error) {}
+}
+
+function stopDesktopRingtone() {
+  const ringtone = state.ringtone;
+  if (!ringtone) return;
+  clearInterval(ringtone.interval);
+  try {
+    ringtone.gain.gain.setTargetAtTime(0, ringtone.context.currentTime, 0.01);
+    ringtone.oscillators.forEach((oscillator) => oscillator.stop(ringtone.context.currentTime + 0.04));
+    setTimeout(() => ringtone.context.close().catch(() => {}), 80);
+  } catch (_error) {}
+  state.ringtone = null;
+}
+
+async function showIncomingCallNotification(event) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const name = displayName(event.user);
+  const title = `${event.kind === 'video' ? 'Видеозвонок' : 'Аудиозвонок'} от ${name}`;
+  await window.nexusPwa?.showNotification?.(title, {
+    body: 'Входящий звонок',
+    tag: `call-${event.callId}`,
+    requireInteraction: true,
+    data: {
+      url: `/?chat=private-${event.from}&callAction=open&callId=${encodeURIComponent(event.callId)}`,
+      call: { callId: event.callId, from: event.from, kind: event.kind },
+      chat: { type: 'private', id: event.from }
+    },
+    actions: [
+      { action: 'answer-call', title: 'Ответить' },
+      { action: 'reject-call', title: 'Сбросить' }
+    ]
+  }).catch(() => {});
+}
+
+async function restorePendingCallFromNotification() {
+  const params = new URLSearchParams(location.search);
+  const action = params.get('callAction');
+  const requestedCallId = params.get('callId');
+  if (!action && !requestedCallId) return;
+  const data = await api('/api/webrtc/calls/pending').catch(() => ({ call: null }));
+  const pending = data.call;
+  if (!pending || (requestedCallId && pending.callId !== requestedCallId)) return;
+  const user = pending.user || state.users.find((item) => item.id === pending.from);
+  if (user && !state.users.some((item) => item.id === user.id)) {
+    state.users.push(user);
+    state.users.sort((a, b) => a.username.localeCompare(b.username));
+    renderLists();
+  }
+  if (user) await openPrivate(user);
+  state.call = {
+    state: 'incoming',
+    kind: pending.kind === 'video' ? 'video' : 'audio',
+    callId: pending.callId,
+    peerId: pending.from,
+    user,
+    muted: false,
+    cameraOff: false,
+    pendingCandidates: []
+  };
+  setCallStatus('Входящий звонок');
+  renderCallOverlay();
+  if (action === 'reject') {
+    rejectCall();
+    history.replaceState(null, '', location.pathname);
+    return;
+  }
+  if (action === 'answer') {
+    await acceptIncomingCall();
+    history.replaceState(null, '', location.pathname);
+  }
+}
+
 function renderCallOverlay() {
   const call = state.call;
   if (!call) {
@@ -1063,6 +1210,7 @@ function closePeerConnection() {
 }
 
 function cleanupCall(reason = '') {
+  stopDesktopRingtone();
   stopCallMedia();
   closePeerConnection();
   state.call = null;
@@ -1135,6 +1283,7 @@ async function startCall(kind) {
 async function acceptIncomingCall() {
   if (!state.call || state.call.state !== 'incoming') return;
   try {
+    stopDesktopRingtone();
     state.call.state = 'connecting';
     setCallStatus('Подключаемся...');
     await prepareLocalCallMedia(state.call.kind);
@@ -1196,11 +1345,13 @@ async function handleCallIce(event) {
 
 function rejectCall(reason = 'rejected') {
   if (!state.call) return;
+  stopDesktopRingtone();
   state.socket.emit('call:reject', { to: state.call.peerId, callId: state.call.callId, reason });
   cleanupCall();
 }
 
 function endCall(reason = 'ended') {
+  stopDesktopRingtone();
   if (state.call?.peerId) state.socket.emit('call:end', { to: state.call.peerId, callId: state.call.callId, reason });
   cleanupCall();
 }
@@ -1284,6 +1435,8 @@ function setupSocket() {
     };
     setCallStatus('Входящий звонок');
     renderCallOverlay();
+    startDesktopRingtone();
+    showIncomingCallNotification(event);
   });
   state.socket.on('call:accepted', async (event) => {
     if (!state.call || state.call.callId !== event.callId) return;
@@ -1341,7 +1494,7 @@ function setupSocket() {
     if (message.sender_id !== state.me.id) {
       if (state.chat.type === 'private' && state.chat.id === otherId && document.hasFocus()) state.socket.emit('private:read', { userId: otherId });
       bumpUnread('private', otherId, message.body?.toLowerCase().includes(`@${state.me.username}`));
-      showDeviceNotification(`Сообщение от ${message.sender_display_name || message.sender_username}`, message.body || message.attachment_name || 'Медиа', other?.muted);
+      showDeviceNotification(`Сообщение от ${message.sender_display_name || message.sender_username}`, messagePreview(message), other?.muted);
     }
   });
   state.socket.on('private:read', (event) => {
@@ -2343,6 +2496,7 @@ window.addEventListener('touchcancel', () => {
       setSidebarMode('chats');
     }
     updateComposerMode();
+    await restorePendingCallFromNotification();
     if (!state.me.display_name) document.querySelector('#settingsButton').click();
     el.loadingScreen.classList.add('done');
     showChangelogIfNeeded();

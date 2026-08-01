@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nexus-shell-v26';
+const CACHE_NAME = 'nexus-shell-v27';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -71,6 +71,8 @@ self.addEventListener('push', (event) => {
     data = { body: event.data?.text() || '' };
   }
 
+  const actions = Array.isArray(data.actions) ? data.actions.slice(0, 2) : [{ action: 'open', title: 'Открыть' }];
+
   event.waitUntil(
     self.registration.showNotification(data.title || 'Nexus', {
       body: data.body || '',
@@ -82,26 +84,30 @@ self.addEventListener('push', (event) => {
       silent: false,
       timestamp: Date.now(),
       vibrate: [120, 60, 120],
-      actions: [
-        { action: 'open', title: 'Открыть' }
-      ],
-      data: { url: data.url || '/', chat: data.chat || null },
+      actions,
+      data: { url: data.url || '/', chat: data.chat || null, call: data.call || null, type: data.type || 'message' },
     })
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || '/';
+  const data = event.notification.data || {};
+  let targetUrl = data.url || '/';
+  if (data.type === 'call' && data.call?.callId && data.call?.from) {
+    const action = event.action === 'answer-call' ? 'answer' : event.action === 'reject-call' ? 'reject' : 'open';
+    targetUrl = `/?chat=private-${data.call.from}&callAction=${action}&callId=${encodeURIComponent(data.call.callId)}`;
+  }
+  const absoluteTargetUrl = new URL(targetUrl, self.location.origin).href;
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {
         if ('focus' in client) {
-          client.navigate(targetUrl);
+          client.navigate(absoluteTargetUrl);
           return client.focus();
         }
       }
-      return self.clients.openWindow(targetUrl);
+      return self.clients.openWindow(absoluteTargetUrl);
     })
   );
 });

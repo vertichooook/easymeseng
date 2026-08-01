@@ -3,6 +3,7 @@ const config = require('../config');
 const q = require('../database/queries');
 
 const pushReady = Boolean(config.vapidPublicKey && config.vapidPrivateKey && config.vapidSubject);
+const CALL_MESSAGE_PREFIX = '__nexus_call__';
 
 if (pushReady) {
   webPush.setVapidDetails(config.vapidSubject, config.vapidPublicKey, config.vapidPrivateKey);
@@ -27,6 +28,7 @@ function mediaLabel(attachmentType) {
 
 function compactBody(message) {
   const text = String(message?.body || '').trim();
+  if (text.startsWith(CALL_MESSAGE_PREFIX)) return 'Звонок';
   if (text) return text.slice(0, 140);
   if (message?.attachment_name) return String(message.attachment_name).slice(0, 140);
   return mediaLabel(message?.attachment_type);
@@ -48,7 +50,10 @@ async function sendPushToUser(userId, payload) {
         body: payload.body || '',
         url: payload.url || '/',
         tag: payload.tag || 'nexus-message',
-        chat: payload.chat || null
+        chat: payload.chat || null,
+        type: payload.type || 'message',
+        call: payload.call || null,
+        actions: payload.actions || null
       }));
     } catch (error) {
       if (error.statusCode === 404 || error.statusCode === 410) {
