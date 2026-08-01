@@ -28,7 +28,8 @@ const state = {
   longPressTimer: null,
   longPressTriggered: false,
   lastReactionTap: null,
-  edgeSwipe: null
+  edgeSwipe: null,
+  lastInteractionAt: Date.now()
 };
 
 const el = {
@@ -179,7 +180,19 @@ function recoverFromWake() {
   if (state.socket && !state.socket.connected) state.socket.connect();
   markCurrentPrivateRead();
   sendActiveState();
+  [80, 350, 1000].forEach((delay) => setTimeout(resetTransientUi, delay));
 }
+
+function recoverAfterIdleInteraction() {
+  const now = Date.now();
+  const idleFor = now - state.lastInteractionAt;
+  state.lastInteractionAt = now;
+  if (idleFor > 12000) recoverFromWake();
+}
+
+['pointerdown', 'touchstart', 'mousedown'].forEach((name) => {
+  window.addEventListener(name, recoverAfterIdleInteraction, { capture: true, passive: true });
+});
 
 window.addEventListener('focus', () => {
   recoverFromWake();

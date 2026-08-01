@@ -2785,10 +2785,6 @@ dialog[open] { animation: modalIn 0.16s ease both; }
     line-height: 1;
   }
 
-  body.sidebar-open .chat {
-    pointer-events: none;
-  }
-
   body.sidebar-swiping .sidebar {
     transition: none !important;
   }
