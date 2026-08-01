@@ -32,6 +32,7 @@ const state = {
 
 const el = {
   sidebar: document.querySelector('#sidebar'),
+  chats: document.querySelector('#chatsList'),
   rooms: document.querySelector('#roomsList'),
   users: document.querySelector('#usersList'),
   peopleSearchInput: document.querySelector('#peopleSearchInput'),
@@ -403,7 +404,29 @@ function unreadBadge(type, id, muted) {
   return muted ? '<b class="unread-dot"></b>' : `<b class="unread-count">${count > 99 ? '99+' : count}</b>`;
 }
 
+function chatSortTime(item) {
+  return Date.parse(`${item.last_message_at || item.updated_at || item.created_at || '1970-01-01 00:00:00'}Z`) || 0;
+}
+
+function renderUnifiedChats() {
+  if (!el.chats) return;
+  const rooms = state.rooms.map((room) => ({ type: 'room', id: room.id, title: `# ${room.name}`, entity: room, muted: room.muted, sort: chatSortTime(room) }));
+  const users = state.users.map((user) => ({ type: 'private', id: user.id, title: displayName(user), entity: user, muted: user.muted, sort: chatSortTime(user) }));
+  const items = [...rooms, ...users].sort((a, b) => b.sort - a.sort || a.title.localeCompare(b.title));
+  el.chats.innerHTML = items.length
+    ? items.map((item) => `
+      <button class="list-item chat-list-item ${state.chat.type === item.type && state.chat.id === item.id ? 'active' : ''}" data-${item.type === 'room' ? 'room' : 'user'}="${item.id}">
+        ${avatar(item.entity, 'small')}
+        <span>${escapeHtml(item.title)}</span>
+        ${unreadBadge(item.type, item.id, item.muted)}
+        <small>${item.type === 'room' ? 'room' : `<i class="dot ${state.onlineIds.has(item.id) ? 'online' : ''}"></i>${state.onlineIds.has(item.id) ? 'online' : 'offline'}`}</small>
+      </button>
+    `).join('')
+    : '<p class="muted-text">Пока нет чатов.</p>';
+}
+
 function renderLists() {
+  renderUnifiedChats();
   el.rooms.innerHTML = state.rooms.map((room) => `
     <button class="list-item ${state.chat.type === 'room' && state.chat.id === room.id ? 'active' : ''}" data-room="${room.id}">
       ${avatar(room, 'small')}
@@ -1799,6 +1822,7 @@ el.roomSettingsForm.addEventListener('submit', async (event) => {
 });
 
 document.querySelector('#openRoomModal').onclick = () => document.querySelector('#roomModal').showModal();
+document.querySelector('#openRoomModalChat')?.addEventListener('click', () => document.querySelector('#roomModal').showModal());
 document.querySelector('#cancelRoom').onclick = () => document.querySelector('#roomModal').close();
 document.querySelector('#roomForm').addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -1869,7 +1893,7 @@ document.querySelector('#closeSidebar').onclick = () => setSidebarOpen(false);
       setSidebarMode('chats');
     } else {
       await openRoom(lastChat?.item || state.rooms[0]);
-      setSidebarMode('rooms');
+      setSidebarMode('chats');
     }
     if (!state.me.display_name) document.querySelector('#profileButton').click();
     el.loadingScreen.classList.add('done');

@@ -2370,3 +2370,185 @@ dialog[open] { animation: modalIn 0.16s ease both; }
     padding: 0 10px;
   }
 }
+
+/* Telegram concept: unified chat list and overlay pinned message */
+.app-shell {
+  position: relative;
+  grid-template-columns: 326px minmax(0, 1fr) 286px;
+  background: var(--canvas);
+}
+
+.nav-rail {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
+  justify-self: stretch;
+  min-height: 0;
+  height: 68px;
+  margin: 0;
+  padding: 8px 12px;
+  flex-direction: row;
+  justify-content: center;
+  background: color-mix(in srgb, var(--panel) 96%, var(--canvas));
+  border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  box-shadow: 0 -14px 28px rgb(20 30 42 / 0.08);
+  z-index: 15;
+}
+
+.nav-rail .logo-mark {
+  display: none;
+}
+
+.rail-bottom {
+  margin-top: 0;
+  margin-left: auto;
+}
+
+.rail-button {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  color: var(--muted);
+  background: transparent;
+}
+
+.rail-button:hover,
+.rail-button.active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-3));
+  border-color: transparent;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.sidebar {
+  grid-column: 1;
+  grid-row: 1;
+  padding-bottom: 68px;
+  background: color-mix(in srgb, var(--panel) 96%, var(--canvas));
+}
+
+.chat {
+  grid-column: 2;
+  grid-row: 1;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  background:
+    radial-gradient(circle at 15% 0%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 32%),
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-2) 62%, var(--canvas)), var(--canvas));
+}
+
+.inspector-panel {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.chats-panel {
+  min-height: 0;
+}
+
+.chats-panel .section-title span {
+  font-size: 18px;
+  color: var(--text);
+  text-transform: none;
+}
+
+.chat-list-item small {
+  grid-column: 2;
+}
+
+.messages-wrap {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.messages-wrap .messages {
+  height: 100%;
+  padding-top: 18px;
+}
+
+.messages-wrap .pinned-bar {
+  position: absolute;
+  top: 10px;
+  left: max(12px, calc((100% - 900px) / 2));
+  right: max(12px, calc((100% - 900px) / 2));
+  z-index: 8;
+  margin: 0;
+  min-height: 42px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.messages-wrap .pinned-bar:not([hidden]) + .messages {
+  padding-top: 68px;
+}
+
+.chat-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+}
+
+.composer {
+  border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  background: color-mix(in srgb, var(--canvas) 90%, transparent);
+}
+
+@media (max-width: 1120px) {
+  .app-shell {
+    grid-template-columns: 326px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    width: 100%;
+    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+  }
+
+  .nav-rail {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    width: auto;
+    height: calc(64px + env(safe-area-inset-bottom));
+    padding: 7px 12px max(7px, env(safe-area-inset-bottom));
+    flex-direction: row;
+    border-radius: 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -16px 32px rgb(20 30 42 / 0.16);
+  }
+
+  body.sidebar-open .nav-rail {
+    display: flex;
+  }
+
+  body.keyboard-open .nav-rail {
+    display: none;
+  }
+
+  .chat {
+    grid-column: 1;
+  }
+
+  .messages-wrap .pinned-bar {
+    top: 7px;
+    left: 8px;
+    right: 8px;
+    min-height: 38px;
+  }
+
+  .messages-wrap .pinned-bar:not([hidden]) + .messages {
+    padding-top: 56px;
+  }
+
+  .messages-wrap .messages {
+    padding-top: 10px;
+  }
+}

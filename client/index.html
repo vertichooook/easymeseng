@@ -55,14 +55,21 @@
         </div>
         <button id="closeSidebar" class="icon-button ghost" type="button" title="Закрыть">×</button>
       </div>
-      <section class="panel-section rooms-panel" data-sidebar-panel="rooms">
+      <section class="panel-section chats-panel" data-sidebar-panel="chats">
+        <div class="section-title">
+          <span>Чаты</span>
+          <button id="openRoomModalChat" class="icon-button" type="button" title="Создать комнату">+</button>
+        </div>
+        <div id="chatsList" class="list"></div>
+      </section>
+      <section class="panel-section rooms-panel" data-sidebar-panel="rooms" hidden>
         <div class="section-title">
           <span>Комнаты</span>
           <button id="openRoomModal" class="icon-button" type="button" title="Создать комнату">+</button>
         </div>
         <div id="roomsList" class="list"></div>
       </section>
-      <section class="panel-section users-section" data-sidebar-panel="chats">
+      <section class="panel-section users-section" data-sidebar-panel="direct" hidden>
         <div class="section-title"><span>Личные сообщения</span></div>
         <div id="usersList" class="list"></div>
       </section>
@@ -92,8 +99,10 @@
           </span>
         </button>
       </header>
-      <button id="pinnedBar" class="pinned-bar" type="button" hidden></button>
-      <div id="messages" class="messages" aria-live="polite"></div>
+      <div class="messages-wrap">
+        <button id="pinnedBar" class="pinned-bar" type="button" hidden></button>
+        <div id="messages" class="messages" aria-live="polite"></div>
+      </div>
       <div id="typing" class="typing"></div>
       <form id="messageForm" class="composer">
         <div id="replyBar" class="reply-bar" hidden></div>
