@@ -27,7 +27,8 @@ const state = {
   chunks: [],
   longPressTimer: null,
   longPressTriggered: false,
-  lastReactionTap: null
+  lastReactionTap: null,
+  edgeSwipe: null
 };
 
 const el = {
@@ -1921,6 +1922,25 @@ document.querySelector('#roomForm').addEventListener('submit', async (event) => 
 
 document.querySelector('#openSidebar').onclick = () => setSidebarOpen(true);
 document.querySelector('#closeSidebar').onclick = () => setSidebarOpen(false);
+
+window.addEventListener('touchstart', (event) => {
+  if (window.innerWidth > 760 || document.body.classList.contains('sidebar-open')) return;
+  const touch = event.touches[0];
+  if (!touch || touch.clientX > 24) return;
+  state.edgeSwipe = { x: touch.clientX, y: touch.clientY };
+}, { passive: true });
+
+window.addEventListener('touchend', (event) => {
+  if (!state.edgeSwipe || window.innerWidth > 760) {
+    state.edgeSwipe = null;
+    return;
+  }
+  const touch = event.changedTouches[0];
+  const dx = touch.clientX - state.edgeSwipe.x;
+  const dy = Math.abs(touch.clientY - state.edgeSwipe.y);
+  state.edgeSwipe = null;
+  if (dx > 72 && dy < 70) setSidebarOpen(true);
+}, { passive: true });
 
 (async function boot() {
   try {
