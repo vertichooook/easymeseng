@@ -46,11 +46,15 @@ const el = {
   peopleSearchButton: document.querySelector('#peopleSearchButton'),
   peopleContactsList: document.querySelector('#peopleContactsList'),
   peopleSearchResults: document.querySelector('#peopleSearchResults'),
+  callsList: document.querySelector('#callsList'),
   messages: document.querySelector('#messages'),
   title: document.querySelector('#chatTitle'),
   chatSubtitle: document.querySelector('#chatSubtitle'),
   chatAvatar: document.querySelector('#chatAvatar'),
   chatHeaderButton: document.querySelector('#chatHeaderButton'),
+  chatSearchButton: document.querySelector('#chatSearchButton'),
+  pinnedFocusButton: document.querySelector('#pinnedFocusButton'),
+  inspectorToggleButton: document.querySelector('#inspectorToggleButton'),
   audioCallButton: document.querySelector('#audioCallButton'),
   videoCallButton: document.querySelector('#videoCallButton'),
   pinnedBar: document.querySelector('#pinnedBar'),
@@ -542,6 +546,16 @@ function unreadBadge(type, id, muted) {
   return muted ? '<b class="unread-dot"></b>' : `<b class="unread-count">${count > 99 ? '99+' : count}</b>`;
 }
 
+function messageContextFromElement(messageEl) {
+  if (!messageEl) return null;
+  return {
+    id: Number(messageEl.dataset.messageId),
+    type: messageEl.dataset.messageType,
+    author: messageEl.querySelector('.meta strong')?.textContent || '',
+    body: messageEl.querySelector('.message-content p')?.textContent || 'медиа'
+  };
+}
+
 function chatSortTime(item) {
   return Date.parse(`${item.last_message_at || item.updated_at || item.created_at || '1970-01-01 00:00:00'}Z`) || 0;
 }
@@ -619,6 +633,19 @@ function renderLists() {
   renderUnifiedChats();
   el.rooms.innerHTML = state.rooms.map((room) => compactListItem(room, 'room')).join('');
   el.users.innerHTML = state.users.map((user) => compactListItem(user, 'private')).join('');
+  if (el.callsList) {
+    el.callsList.innerHTML = state.users.length
+      ? state.users.map((user) => `
+        <button class="list-item compact-chat-item ${state.onlineIds.has(user.id) ? 'user-online' : ''}" data-user="${user.id}">
+          ${avatar(user, 'small')}
+          <span class="chat-card-copy">
+            <strong>${icon('phone', 'chat-kind-icon')}${escapeHtml(displayName(user))}</strong>
+            <small>${state.onlineIds.has(user.id) ? 'Можно позвонить' : `@${escapeHtml(user.username)}`}</small>
+          </span>
+        </button>
+      `).join('')
+      : '<p class="muted-text">Контактов пока нет.</p>';
+  }
   if (el.peopleContactsList) {
     el.peopleContactsList.innerHTML = state.users.length
       ? state.users.map((user) => `
@@ -635,11 +662,12 @@ function renderLists() {
 }
 
 function setSidebarMode(mode) {
+  const nextMode = document.querySelector(`[data-sidebar-panel="${mode}"]`) ? mode : 'chats';
   document.querySelectorAll('[data-sidebar-panel]').forEach((panel) => {
-    panel.hidden = panel.dataset.sidebarPanel !== mode;
+    panel.hidden = panel.dataset.sidebarPanel !== nextMode;
   });
   document.querySelectorAll('[data-rail-action]').forEach((item) => {
-    item.classList.toggle('active', item.dataset.railAction === mode);
+    item.classList.toggle('active', item.dataset.railAction === nextMode);
   });
   setSidebarOpen(innerWidth < 760);
 }
@@ -894,6 +922,12 @@ function renderMessage(message, type = state.chat.type) {
   return `
     <article class="message ${mine ? 'mine' : ''} ${mentioned ? 'mentioned' : ''} ${pinned ? 'is-pinned' : ''}" data-message-id="${message.id}" data-message-type="${type}">
       ${avatar(authorUser, 'small')}
+      <div class="message-hover-actions" aria-label="Действия с сообщением">
+        <button type="button" data-menu-action="reply" title="Ответить">${icon('message-square')}</button>
+        <button type="button" data-menu-action="forward" title="Переслать">${icon('send')}</button>
+        <button type="button" data-menu-action="pin" title="Закрепить">${icon('pin')}</button>
+        <button type="button" data-menu-action="delete" title="Удалить">${icon('x')}</button>
+      </div>
       <div class="message-content">
         <div class="meta"><strong>${escapeHtml(displayName(authorUser))}</strong><time>${formatTime(message.created_at)}</time>${statusHtml}</div>
         ${message.reply_preview_author ? `<div class="reply-preview">${escapeHtml(message.reply_preview_author)}: ${escapeHtml(message.reply_preview_body)}</div>` : ''}
@@ -1020,7 +1054,7 @@ function setHeader() {
   el.chatAvatar.outerHTML = avatar(state.chat.type === 'room' ? item : item, 'small').replace('class="avatar small"', `id="chatAvatar" class="avatar small${onlineClass}"`);
   el.chatAvatar = document.querySelector('#chatAvatar');
   if (el.inspectorAvatar) el.inspectorAvatar.innerHTML = avatar(item, 'large');
-  if (el.inspectorTitle) el.inspectorTitle.textContent = state.chat.type === 'room' ? `# ${state.chat.title}` : displayName(item);
+  if (el.inspectorTitle) el.inspectorTitle.textContent = state.chat.type === 'room' ? state.chat.title : displayName(item);
   if (el.inspectorMeta) {
     const type = state.chat.type === 'room' ? 'Room workspace' : `@${item?.username || 'user'}`;
     const muted = currentChatMuted() ? ' · muted' : '';
@@ -1643,7 +1677,7 @@ function setupSocket() {
   state.socket.on('room:created', (room) => {
     if (!state.rooms.some((item) => item.id === room.id)) state.rooms.push(room);
     renderLists();
-    toast(`Приглашение в комнату #${room.name}`);
+      toast(`Приглашение в комнату ${room.name}`);
   });
   state.socket.on('room:updated', (room) => {
     state.rooms = state.rooms.map((item) => item.id === room.id ? { ...item, ...room } : item);
@@ -1670,7 +1704,7 @@ function setupSocket() {
     if (message.user_id !== state.me.id) {
       const room = state.rooms.find((item) => item.id === message.room_id);
       bumpUnread('room', message.room_id, mentioned);
-      showDeviceNotification(`# ${room?.name || 'room'}`, `${message.display_name || message.username}: ${message.body || message.attachment_name || 'Медиа'}`, room?.muted);
+      showDeviceNotification(room?.name || 'Комната', `${message.display_name || message.username}: ${message.body || message.attachment_name || 'Медиа'}`, room?.muted);
     }
   });
   state.socket.on('private:new', (message) => {
@@ -1712,12 +1746,7 @@ function setupSocket() {
 
 function openContextMenu(messageEl, x, y) {
   document.body.classList.remove('message-pressing');
-  state.contextMessage = {
-    id: Number(messageEl.dataset.messageId),
-    type: messageEl.dataset.messageType,
-    author: messageEl.querySelector('.meta strong')?.textContent || '',
-    body: messageEl.querySelector('.message-content p')?.textContent || 'медиа'
-  };
+  state.contextMessage = messageContextFromElement(messageEl);
   if (!el.contextMenu.querySelector('[data-reaction-picker]')) {
     el.contextMenu.insertAdjacentHTML('afterbegin', `
       <div class="reaction-picker" data-reaction-picker>
@@ -1750,6 +1779,10 @@ document.addEventListener('click', async (event) => {
     return;
   }
   const menuAction = event.target.closest('[data-menu-action]')?.dataset.menuAction;
+  if (menuAction) {
+    const inlineMessage = event.target.closest('[data-message-id]');
+    if (inlineMessage) state.contextMessage = messageContextFromElement(inlineMessage);
+  }
   if (menuAction && state.contextMessage) {
     const msg = state.contextMessage;
     if (menuAction === 'pin') {
@@ -1773,7 +1806,7 @@ document.addEventListener('click', async (event) => {
       el.input.focus();
     }
     if (menuAction === 'forward') {
-      const target = prompt('Куда переслать? Например: @username или #room');
+      const target = prompt('Куда переслать? Например: @username или название комнаты');
       const targets = await resolveForwardTargets(target);
       if (!targets.length) return toast('Получатель не найден.');
       state.socket.emit('message:forward', { chatType: msg.type, messageId: msg.id, targets }, (ack) => toast(ack?.error || 'Сообщение переслано.'));
@@ -2264,6 +2297,18 @@ el.pinnedBar?.addEventListener('click', () => {
   setTimeout(() => message.classList.remove('pin-flash'), 900);
 });
 
+el.pinnedFocusButton?.addEventListener('click', () => el.pinnedBar?.click());
+
+el.chatSearchButton?.addEventListener('click', () => {
+  setSidebarMode('chats');
+  setSidebarOpen(innerWidth < 760);
+  el.globalSearchInput?.focus();
+});
+
+el.inspectorToggleButton?.addEventListener('click', () => {
+  document.body.classList.toggle('inspector-collapsed');
+});
+
 document.querySelector('#settingsButton').onclick = () => {
   renderSettingsProfile();
   document.querySelector('#settingsUsername').textContent = `Ваш username: @${state.me.username}`;
@@ -2393,15 +2438,16 @@ if (el.adminModal && el.adminLoginForm && el.adminWorkspace && el.adminCodesList
 document.querySelectorAll('[data-rail-action]').forEach((button) => {
   button.addEventListener('click', () => {
     const action = button.dataset.railAction;
-    if (action === 'chats') {
-      setSidebarMode('chats');
-    }
-    if (action === 'rooms') {
-      setSidebarMode('rooms');
-    }
-    if (action === 'people') {
-      setSidebarMode('people');
-    }
+    setSidebarMode(action);
+  });
+});
+
+document.querySelectorAll('[data-inspector-tab]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const tab = button.dataset.inspectorTab;
+    document.querySelectorAll('[data-inspector-tab]').forEach((item) => item.classList.toggle('active', item === button));
+    document.querySelectorAll('[data-inspector-pane]').forEach((pane) => pane.classList.toggle('active', pane.dataset.inspectorPane === tab));
+    document.querySelector('.inspector-members')?.classList.toggle('active', tab === 'members');
   });
 });
 
@@ -2504,7 +2550,7 @@ if (el.peopleSearchResults) {
 el.chatHeaderButton.onclick = async () => {
   const item = currentItem();
   if (!item) return;
-  document.querySelector('#roomSettingsModal h2').textContent = state.chat.type === 'room' ? `# ${item.name}` : displayName(item);
+  document.querySelector('#roomSettingsModal h2').textContent = state.chat.type === 'room' ? item.name : displayName(item);
   el.roomAvatarPreview.innerHTML = avatar(item, 'large');
   el.roomAvatarInput.value = '';
   const canInvite = state.chat.type === 'room' && item.role === 'admin';
