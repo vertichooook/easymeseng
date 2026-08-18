@@ -34,13 +34,6 @@
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.5 5.8L21 8"/><path d="M21 3v5h-5"/></symbol>
     <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="m19 16 .9 2.6 2.1.9-2.1.9L19 23l-.9-2.6-2.1-.9 2.1-.9Z"/><path d="m4 4 .7 2 1.8.7-1.8.7-.7 2-.7-2-1.8-.7 1.8-.7Z"/></symbol>
-    <symbol id="i-message-square" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></symbol>
-    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
-    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M10 21h4"/><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/></symbol>
-    <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></symbol>
-    <symbol id="i-more-vertical" viewBox="0 0 24 24"><path d="M12 8h.01M12 12h.01M12 16h.01"/></symbol>
-    <symbol id="i-shield-check" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V5l8-3 8 3Z"/><path d="m9 12 2 2 4-4"/></symbol>
-    <symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.5-3.5a2 2 0 0 0-2.8 0L7 19"/></symbol>
   </svg>
   <div id="loadingScreen" class="loading-screen">
     <div class="loading-desktop">
@@ -58,24 +51,13 @@
   </div>
 
   <div class="app-shell">
-    <nav class="nav-rail" aria-label="Навигация Nexus">
-      <span class="logo-mark rail-logo">N</span>
-      <button class="rail-button active" type="button" data-rail-action="chats" title="Все чаты" aria-label="Все чаты"><svg><use href="#i-message-square"></use></svg></button>
-      <button class="rail-button" type="button" data-rail-action="direct" title="Личные" aria-label="Личные"><svg><use href="#i-lock"></use></svg></button>
-      <button class="rail-button" type="button" data-rail-action="rooms" title="Группы" aria-label="Группы"><svg><use href="#i-hash"></use></svg></button>
-      <button class="rail-button" type="button" data-rail-action="calls" title="Звонки" aria-label="Звонки"><svg><use href="#i-phone"></use></svg></button>
-      <button class="rail-button" type="button" data-rail-action="people" title="Контакты" aria-label="Контакты"><svg><use href="#i-users"></use></svg></button>
-      <div class="rail-bottom">
-        <button id="themeButton" class="rail-button" type="button" title="Тема" aria-label="Тема"><svg><use href="#i-sparkles"></use></svg></button>
-        <button id="settingsButton" class="rail-button profile-rail-button" type="button" title="Профиль и настройки" aria-label="Профиль и настройки"><svg><use href="#i-settings"></use></svg></button>
-      </div>
-    </nav>
     <aside id="sidebar" class="sidebar">
       <div class="brand">
         <div class="brand-lockup">
           <span class="logo-mark">N</span>
           <span><strong>Nexus</strong><small>Command messenger</small></span>
         </div>
+        <button id="settingsButton" class="icon-button ghost settings-entry-button" type="button" title="Настройки" aria-label="Настройки"><svg><use href="#i-settings"></use></svg></button>
         <button id="closeSidebar" class="icon-button ghost" type="button" title="Закрыть"><svg><use href="#i-arrow-left"></use></svg></button>
       </div>
       <label class="global-search">
@@ -116,10 +98,6 @@
         <div id="peopleContactsList" class="list people-contacts"></div>
         <div id="peopleSearchResults" class="list people-results"></div>
       </section>
-      <section class="panel-section calls-section" data-sidebar-panel="calls" hidden>
-        <div class="section-title"><span>Звонки</span></div>
-        <div id="callsList" class="list calls-list"></div>
-      </section>
     </aside>
 
     <main class="chat">
@@ -133,11 +111,10 @@
           </span>
         </button>
         <div class="call-actions">
-          <button id="chatSearchButton" class="icon-button ghost header-tool" type="button" title="Поиск"><svg><use href="#i-search"></use></svg></button>
           <button id="audioCallButton" class="icon-button ghost" type="button" title="Аудиозвонок" aria-label="Аудиозвонок" hidden><svg><use href="#i-phone"></use></svg></button>
           <button id="videoCallButton" class="icon-button ghost" type="button" title="Видеозвонок" aria-label="Видеозвонок" hidden><svg><use href="#i-video"></use></svg></button>
-          <button id="pinnedFocusButton" class="icon-button ghost header-tool" type="button" title="Закрепленные сообщения"><svg><use href="#i-pin"></use></svg></button>
-          <button id="inspectorToggleButton" class="icon-button ghost header-tool" type="button" title="Информация"><svg><use href="#i-more-vertical"></use></svg></button>
+          <button class="icon-button ghost header-tool" type="button" title="Закрепленные сообщения"><svg><use href="#i-pin"></use></svg></button>
+          <button class="icon-button ghost header-tool" type="button" title="Информация"><svg><use href="#i-info"></use></svg></button>
         </div>
       </header>
       <div class="messages-wrap">
@@ -149,7 +126,7 @@
         <div id="replyBar" class="reply-bar" hidden></div>
         <input id="fileInput" type="file" accept="image/*,video/*" hidden>
         <button id="attachButton" class="icon-button ghost" type="button" title="Фото или видео" aria-label="Фото или видео"><svg><use href="#i-paperclip"></use></svg></button>
-        <button class="icon-button ghost emoji-button" type="button" title="Эмодзи" aria-label="Эмодзи"><svg><use href="#i-smile"></use></svg></button>
+        <button class="icon-button ghost emoji-button" type="button" title="Эмодзи" aria-label="Эмодзи"><svg><use href="#i-sparkles"></use></svg></button>
         <button id="recordButton" class="icon-button ghost media-icon mic-icon" type="button" title="Тап: голос/видео. Удерживайте для записи" aria-label="Запись"><svg><use href="#i-mic"></use></svg></button>
         <textarea id="messageInput" maxlength="1000" placeholder="Напишите сообщение" rows="1"></textarea>
         <button id="sendButton" class="send-fab" type="submit" title="Отправить" aria-label="Отправить"><svg><use href="#i-send"></use></svg></button>
@@ -162,25 +139,9 @@
         <strong id="inspectorTitle">Nexus</strong>
         <span id="inspectorMeta">Workspace</span>
       </div>
-      <div class="inspector-tabs" role="tablist" aria-label="Информация о чате">
-        <button type="button" data-inspector-tab="info">Инфо</button>
-        <button class="active" type="button" data-inspector-tab="members">Участники</button>
-        <button type="button" data-inspector-tab="media">Медиа</button>
-        <button type="button" data-inspector-tab="pins">Пины</button>
-      </div>
-      <div class="inspector-pane" data-inspector-pane="info">
-        <div class="info-chip"><svg><use href="#i-shield-check"></use></svg><span>Защищенная сессия</span></div>
-        <div class="info-chip"><svg><use href="#i-bell"></use></svg><span>Уведомления Nexus</span></div>
-      </div>
-      <div class="inspector-members active">
+      <div class="inspector-members">
         <div class="inspector-section-title">Participants</div>
         <div id="inspectorMembersList" class="inspector-members-list"></div>
-      </div>
-      <div class="inspector-pane" data-inspector-pane="media">
-        <div class="empty-mini"><svg><use href="#i-image"></use></svg><span>Медиа появятся после отправки файлов.</span></div>
-      </div>
-      <div class="inspector-pane" data-inspector-pane="pins">
-        <div class="empty-mini"><svg><use href="#i-pin"></use></svg><span>Закрепленные сообщения будут здесь.</span></div>
       </div>
     </aside>
   </div>
@@ -247,6 +208,7 @@
       <input id="avatarInput" type="file" accept="image/*" hidden>
       <label>Имя<input id="settingsDisplayName" name="display_name" required minlength="2" maxlength="48"></label>
       <label>Username<input id="settingsProfileUsername" name="username" required minlength="3" maxlength="32"></label>
+      <button id="themeButton" type="button">Переключить тему</button>
       <button id="notifyButton" type="button">Разрешить уведомления</button>
       <button id="copyUsernameButton" type="button">Скопировать username</button>
       <button id="adminOpenButton" type="button">Администрирование</button>
