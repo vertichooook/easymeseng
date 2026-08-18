@@ -5,6 +5,7 @@ const state = {
   users: [],
   onlineIds: new Set(),
   unread: new Map(),
+  chatFilter: 'all',
   pinned: null,
   chat: { type: 'room', id: 1, title: 'general' },
   replyTo: null,
@@ -37,6 +38,7 @@ const state = {
 
 const el = {
   sidebar: document.querySelector('#sidebar'),
+  globalSearchInput: document.querySelector('#globalSearchInput'),
   chats: document.querySelector('#chatsList'),
   rooms: document.querySelector('#roomsList'),
   users: document.querySelector('#usersList'),
@@ -46,6 +48,7 @@ const el = {
   peopleSearchResults: document.querySelector('#peopleSearchResults'),
   messages: document.querySelector('#messages'),
   title: document.querySelector('#chatTitle'),
+  chatSubtitle: document.querySelector('#chatSubtitle'),
   chatAvatar: document.querySelector('#chatAvatar'),
   chatHeaderButton: document.querySelector('#chatHeaderButton'),
   audioCallButton: document.querySelector('#audioCallButton'),
@@ -122,6 +125,8 @@ const chatKey = (type, id) => `${type}:${id}`;
 const CALL_MESSAGE_PREFIX = '__nexus_call__';
 const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
 const displayName = (user) => user?.display_name || user?.username || user?.name || '?';
+
+const icon = (name, cls = '') => `<svg class="${cls}" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
 const mediaSrc = (url) => {
   const value = String(url || '');
   if (value.startsWith('/uploads/')) return `/api/uploads/file/${encodeURIComponent(value.split('/').pop())}`;
@@ -307,7 +312,7 @@ function setupCameraModeButton() {
   el.cameraModeButton.type = 'button';
   el.cameraModeButton.title = 'Сменить камеру';
   el.cameraModeButton.setAttribute('aria-label', 'Сменить камеру');
-  el.cameraModeButton.textContent = '↻';
+  el.cameraModeButton.innerHTML = icon('refresh');
   el.cameraModeButton.hidden = true;
   el.recordButton.before(el.cameraModeButton);
 }
@@ -541,45 +546,88 @@ function chatSortTime(item) {
   return Date.parse(`${item.last_message_at || item.updated_at || item.created_at || '1970-01-01 00:00:00'}Z`) || 0;
 }
 
+function chatItemPreview(item) {
+  const unread = state.unread.get(chatKey(item.type, item.id)) || 0;
+  if (item.type === 'private' && state.typing.has(chatKey('private', item.id))) return 'печатает...';
+  if (unread) return `${unread} новых сообщений`;
+  if (item.type === 'private') return state.onlineIds.has(item.id) ? 'В сети' : `@${item.entity.username}`;
+  return item.entity.role === 'admin' ? 'Вы администратор' : 'Группа Nexus';
+}
+
+function chatItemTime(item) {
+  const time = chatSortTime(item);
+  if (!time) return '';
+  return new Date(time).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+}
+
+function filterChatItems(items) {
+  const query = String(el.globalSearchInput?.value || '').trim().toLowerCase();
+  return items.filter((item) => {
+    const unread = state.unread.get(chatKey(item.type, item.id)) || 0;
+    if (state.chatFilter === 'private' && item.type !== 'private') return false;
+    if (state.chatFilter === 'room' && item.type !== 'room') return false;
+    if (state.chatFilter === 'unread' && !unread) return false;
+    if (!query) return true;
+    const haystack = `${item.title} ${item.entity.username || ''} ${item.entity.name || ''}`.toLowerCase();
+    return haystack.includes(query);
+  });
+}
+
 function renderUnifiedChats() {
   if (!el.chats) return;
-  const rooms = state.rooms.map((room) => ({ type: 'room', id: room.id, title: `# ${room.name}`, entity: room, muted: room.muted, sort: chatSortTime(room) }));
+  const rooms = state.rooms.map((room) => ({ type: 'room', id: room.id, title: room.name, entity: room, muted: room.muted, sort: chatSortTime(room) }));
   const users = state.users.map((user) => ({ type: 'private', id: user.id, title: displayName(user), entity: user, muted: user.muted, sort: chatSortTime(user) }));
-  const items = [...rooms, ...users].sort((a, b) => b.sort - a.sort || a.title.localeCompare(b.title));
+  const items = filterChatItems([...rooms, ...users].sort((a, b) => b.sort - a.sort || a.title.localeCompare(b.title)));
   el.chats.innerHTML = items.length
     ? items.map((item) => `
       <button class="list-item chat-list-item ${item.type === 'private' && state.onlineIds.has(item.id) ? 'user-online' : ''} ${state.chat.type === item.type && state.chat.id === item.id ? 'active' : ''}" data-${item.type === 'room' ? 'room' : 'user'}="${item.id}">
         ${avatar(item.entity, 'small')}
-        <span>${escapeHtml(item.title)}</span>
-        ${unreadBadge(item.type, item.id, item.muted)}
+        <span class="chat-card-copy">
+          <strong>${item.type === 'room' ? icon('hash', 'chat-kind-icon') : icon('lock', 'chat-kind-icon')}${escapeHtml(item.title)}</strong>
+          <small>${escapeHtml(chatItemPreview(item))}</small>
+        </span>
+        <span class="chat-card-meta">
+          <time>${escapeHtml(chatItemTime(item))}</time>
+          ${unreadBadge(item.type, item.id, item.muted)}
+        </span>
       </button>
     `).join('')
-    : '<p class="muted-text">Пока нет чатов.</p>';
+    : '<p class="muted-text empty-list-note">Ничего не найдено.</p>';
+}
+
+function compactListItem(entity, type) {
+  const id = entity.id;
+  const active = state.chat.type === type && state.chat.id === id ? 'active' : '';
+  const online = type === 'private' && state.onlineIds.has(id) ? 'user-online' : '';
+  const dataAttr = type === 'room' ? `data-room="${id}"` : `data-user="${id}"`;
+  const title = type === 'room' ? entity.name : displayName(entity);
+  return `
+    <button class="list-item compact-chat-item ${online} ${active}" ${dataAttr}>
+      ${avatar(entity, 'small')}
+      <span class="chat-card-copy">
+        <strong>${type === 'room' ? icon('hash', 'chat-kind-icon') : icon('lock', 'chat-kind-icon')}${escapeHtml(title)}</strong>
+        <small>${type === 'room' ? 'Группа Nexus' : `@${escapeHtml(entity.username)}`}</small>
+      </span>
+      <span class="chat-card-meta">
+        ${unreadBadge(type, id, entity.muted)}
+      </span>
+    </button>
+  `;
 }
 
 function renderLists() {
   renderUnifiedChats();
-  el.rooms.innerHTML = state.rooms.map((room) => `
-    <button class="list-item ${state.chat.type === 'room' && state.chat.id === room.id ? 'active' : ''}" data-room="${room.id}">
-      ${avatar(room, 'small')}
-      <span># ${escapeHtml(room.name)}</span>
-      ${unreadBadge('room', room.id, room.muted)}
-    </button>
-  `).join('');
-  el.users.innerHTML = state.users.map((user) => `
-    <button class="list-item ${state.onlineIds.has(user.id) ? 'user-online' : ''} ${state.chat.type === 'private' && state.chat.id === user.id ? 'active' : ''}" data-user="${user.id}">
-      ${avatar(user, 'small')}
-      <span>${escapeHtml(displayName(user))}</span>
-      ${unreadBadge('private', user.id, user.muted)}
-    </button>
-  `).join('');
+  el.rooms.innerHTML = state.rooms.map((room) => compactListItem(room, 'room')).join('');
+  el.users.innerHTML = state.users.map((user) => compactListItem(user, 'private')).join('');
   if (el.peopleContactsList) {
     el.peopleContactsList.innerHTML = state.users.length
       ? state.users.map((user) => `
-        <button class="list-item ${state.chat.type === 'private' && state.chat.id === user.id ? 'active' : ''}" data-user="${user.id}">
+        <button class="list-item compact-chat-item ${state.chat.type === 'private' && state.chat.id === user.id ? 'active' : ''}" data-user="${user.id}">
           ${avatar(user, 'small')}
-          <span>${escapeHtml(displayName(user))}</span>
-          <small>@${escapeHtml(user.username)}</small>
+          <span class="chat-card-copy">
+            <strong>${icon('lock', 'chat-kind-icon')}${escapeHtml(displayName(user))}</strong>
+            <small>@${escapeHtml(user.username)}</small>
+          </span>
         </button>
       `).join('')
       : '<p class="muted-text">Контактов пока нет.</p>';
@@ -832,7 +880,7 @@ function renderMessage(message, type = state.chat.type) {
   const mentioned = message.body && message.body.toLowerCase().includes(`@${state.me.username}`);
   const pinned = state.pinned?.message_id === message.id && state.pinned?.chat_type === type;
   const statusHtml = type === 'private' && mine
-    ? `<span class="message-status ${message.read_at ? 'read' : 'delivered'}" title="${message.read_at ? 'Прочитано' : 'Доставлено'}">${message.read_at ? '✓✓' : '✓'}</span>`
+    ? `<span class="message-status ${message.read_at ? 'read' : 'delivered'}" title="${message.read_at ? 'Прочитано' : 'Доставлено'}">${icon(message.read_at ? 'checks' : 'check')}</span>`
     : '';
   if (callText) {
     return `
@@ -939,7 +987,7 @@ function updateReplyBar() {
     return;
   }
   el.replyBar.hidden = false;
-  el.replyBar.innerHTML = `<span>Ответ ${escapeHtml(state.replyTo.author)}: ${escapeHtml(state.replyTo.body)}</span><button type="button" data-cancel-reply>×</button>`;
+  el.replyBar.innerHTML = `<span>Ответ ${escapeHtml(state.replyTo.author)}: ${escapeHtml(state.replyTo.body)}</span><button type="button" data-cancel-reply aria-label="Отменить ответ">${icon('x')}</button>`;
 }
 
 function activeTypingKey() {
@@ -962,7 +1010,12 @@ function renderTyping() {
 
 function setHeader() {
   const item = currentItem();
-  el.title.textContent = state.chat.type === 'room' ? `# ${state.chat.title}` : displayName(item);
+  el.title.textContent = state.chat.type === 'room' ? state.chat.title : displayName(item);
+  if (el.chatSubtitle) {
+    el.chatSubtitle.textContent = state.chat.type === 'room'
+      ? (item?.role === 'admin' ? 'Вы администратор' : 'Группа Nexus')
+      : (state.onlineIds.has(state.chat.id) ? 'В сети' : `@${item?.username || 'user'}`);
+  }
   const onlineClass = state.chat.type === 'private' && state.onlineIds.has(state.chat.id) ? ' user-online-avatar' : '';
   el.chatAvatar.outerHTML = avatar(state.chat.type === 'room' ? item : item, 'small').replace('class="avatar small"', `id="chatAvatar" class="avatar small${onlineClass}"`);
   el.chatAvatar = document.querySelector('#chatAvatar');
@@ -991,6 +1044,7 @@ function showEmptyChat() {
   updateReplyBar();
   renderTyping();
   el.title.textContent = 'Чатов пока нет';
+  if (el.chatSubtitle) el.chatSubtitle.textContent = 'Выберите диалог';
   el.chatAvatar.outerHTML = '<span id="chatAvatar" class="avatar small">N</span>';
   el.chatAvatar = document.querySelector('#chatAvatar');
   if (el.audioCallButton) el.audioCallButton.hidden = true;
@@ -999,7 +1053,11 @@ function showEmptyChat() {
   if (el.inspectorTitle) el.inspectorTitle.textContent = 'Nexus';
   if (el.inspectorMeta) el.inspectorMeta.textContent = 'No active chat';
   renderInspectorMembers([]);
-  el.messages.innerHTML = '<div class="empty-chat"><strong>Здесь пока пусто</strong><span>Создайте комнату или дождитесь приглашения.</span></div>';
+  el.messages.innerHTML = `<div class="empty-chat">
+    <span class="empty-illustration">${icon('search')}</span>
+    <strong>Выберите пространство</strong>
+    <span>Комнаты, личные чаты и важные события появятся здесь.</span>
+  </div>`;
   renderLists();
 }
 
@@ -1631,7 +1689,7 @@ function setupSocket() {
       if (!status) continue;
       status.classList.remove('delivered');
       status.classList.add('read');
-      status.textContent = '✓✓';
+      status.innerHTML = icon('checks');
       status.title = 'Прочитано';
     }
   });
@@ -1994,7 +2052,7 @@ async function showLiveRecordPreview(stream) {
     await el.recordLivePreview.play();
     setTimeout(() => {
       if (!el.recordPreviewOverlay.hidden && (!el.recordLivePreview.videoWidth || !el.recordLivePreview.videoHeight)) {
-        toast('Предпросмотр камеры пустой. Нажмите ↻ и попробуйте другую камеру.');
+        toast('Предпросмотр камеры пустой. Смените камеру и попробуйте снова.');
       }
     }, 1100);
   } catch (_error) {
@@ -2152,7 +2210,7 @@ el.recordButton.addEventListener('pointerup', (event) => {
     updateRecordButton();
     toast(state.recordMode === 'audio' ? 'Режим: голосовое сообщение.' : 'Режим: видеосообщение.');
     if (state.recordMode === 'video') {
-      toast('Режим: видеосообщение. Удерживайте для записи, ↻ сменит камеру в окне записи.');
+      toast('Режим: видеосообщение. Удерживайте для записи, кнопку смены камеры используйте в окне записи.');
       void primeMediaPermission('video');
     }
   }
@@ -2345,6 +2403,23 @@ document.querySelectorAll('[data-rail-action]').forEach((button) => {
       setSidebarMode('people');
     }
   });
+});
+
+document.querySelectorAll('[data-chat-filter]').forEach((button) => {
+  button.addEventListener('click', () => {
+    state.chatFilter = button.dataset.chatFilter || 'all';
+    document.querySelectorAll('[data-chat-filter]').forEach((item) => item.classList.toggle('active', item === button));
+    renderUnifiedChats();
+  });
+});
+
+el.globalSearchInput?.addEventListener('input', renderUnifiedChats);
+window.addEventListener('keydown', (event) => {
+  const hotkey = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k';
+  if (!hotkey || !el.globalSearchInput) return;
+  event.preventDefault();
+  setSidebarMode('chats');
+  el.globalSearchInput.focus();
 });
 
 async function searchUsers(query) {

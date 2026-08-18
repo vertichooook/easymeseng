@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#17202a">
+  <meta name="theme-color" content="#090d16">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Nexus">
@@ -15,17 +15,22 @@
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body class="auth-page">
+  <svg class="svg-sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect width="16" height="11" x="4" y="11" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></symbol>
+  </svg>
   <main class="auth-card">
     <div class="auth-logo">
       <span class="logo-mark large">N</span>
-      <strong>Nexus</strong>
+      <span><strong>Nexus</strong><small>Secure command messenger</small></span>
     </div>
     <h1>Вход</h1>
     <p>Войдите по username и паролю.</p>
     <form id="loginForm" class="auth-form">
-      <label>Username<input name="username" autocomplete="username" required minlength="3" maxlength="32"></label>
-      <label>Пароль<input name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128"></label>
-      <button type="submit">Войти</button>
+      <label><span>Username</span><div class="input-shell"><svg><use href="#i-user"></use></svg><input name="username" autocomplete="username" required minlength="3" maxlength="32"></div></label>
+      <label><span>Пароль</span><div class="input-shell"><svg><use href="#i-lock"></use></svg><input name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128"></div></label>
+      <button type="submit">Войти <svg><use href="#i-arrow-right"></use></svg></button>
       <div id="notice" class="notice" role="status"></div>
     </form>
     <a href="/register.html">Создать аккаунт</a>

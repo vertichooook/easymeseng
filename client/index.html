@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#17202a">
+  <meta name="theme-color" content="#090d16">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Nexus">
@@ -15,6 +15,26 @@
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
+  <svg class="svg-sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-search" viewBox="0 0 24 24"><path d="m21 21-4.35-4.35"/><circle cx="11" cy="11" r="7"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2.1 2.1 0 0 1-2.97 2.97l-.04-.04a1.8 1.8 0 0 0-1.98-.36 1.8 1.8 0 0 0-1.1 1.66V21a2.1 2.1 0 0 1-4.2 0v-.06a1.8 1.8 0 0 0-1.1-1.66 1.8 1.8 0 0 0-1.98.36l-.04.04a2.1 2.1 0 0 1-2.97-2.97l.04-.04a1.8 1.8 0 0 0 .36-1.98 1.8 1.8 0 0 0-1.66-1.1H3a2.1 2.1 0 0 1 0-4.2h.06a1.8 1.8 0 0 0 1.66-1.1 1.8 1.8 0 0 0-.36-1.98l-.04-.04a2.1 2.1 0 0 1 2.97-2.97l.04.04a1.8 1.8 0 0 0 1.98.36h.01a1.8 1.8 0 0 0 1.1-1.66V3a2.1 2.1 0 0 1 4.2 0v.06a1.8 1.8 0 0 0 1.1 1.66 1.8 1.8 0 0 0 1.98-.36l.04-.04a2.1 2.1 0 0 1 2.97 2.97l-.04.04a1.8 1.8 0 0 0-.36 1.98v.01a1.8 1.8 0 0 0 1.66 1.1H21a2.1 2.1 0 0 1 0 4.2h-.06a1.8 1.8 0 0 0-1.54.42Z"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-paperclip" viewBox="0 0 24 24"><path d="m21.44 11.05-9.2 9.19a6 6 0 0 1-8.48-8.48l9.2-9.19a4 4 0 1 1 5.65 5.65l-9.19 9.2a2 2 0 0 1-2.83-2.83l8.49-8.48"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v2a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 3.2 2 2 0 0 1 4.11 1h2a2 2 0 0 1 2 1.72c.12.9.33 1.78.62 2.63a2 2 0 0 1-.45 2.11L7.4 8.34a16 16 0 0 0 6.26 6.26l.88-.88a2 2 0 0 1 2.11-.45c.85.29 1.73.5 2.63.62A2 2 0 0 1 22 16.92Z"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><path d="M15 10.5 21 7v10l-6-3.5V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2Z"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="m12 17-5 5"/><path d="M9 14 4 9l6-6 5 5 4-1-8 8Z"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect width="16" height="11" x="4" y="11" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-hash" viewBox="0 0 24 24"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></symbol>
+    <symbol id="i-checks" viewBox="0 0 24 24"><path d="m3 12 4 4L17 6"/><path d="m14 12 2 2 5-5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.5 5.8L21 8"/><path d="M21 3v5h-5"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="m19 16 .9 2.6 2.1.9-2.1.9L19 23l-.9-2.6-2.1-.9 2.1-.9Z"/><path d="m4 4 .7 2 1.8.7-1.8.7-.7 2-.7-2-1.8-.7 1.8-.7Z"/></symbol>
+  </svg>
   <div id="loadingScreen" class="loading-screen">
     <div class="loading-desktop">
       <span class="logo-mark large">N</span>
@@ -35,22 +55,33 @@
       <div class="brand">
         <div class="brand-lockup">
           <span class="logo-mark">N</span>
-          <strong>Nexus</strong>
+          <span><strong>Nexus</strong><small>Command messenger</small></span>
         </div>
-        <button id="settingsButton" class="icon-button ghost settings-entry-button" type="button" title="Настройки" aria-label="Настройки"></button>
-        <button id="closeSidebar" class="icon-button ghost" type="button" title="Закрыть">×</button>
+        <button id="settingsButton" class="icon-button ghost settings-entry-button" type="button" title="Настройки" aria-label="Настройки"><svg><use href="#i-settings"></use></svg></button>
+        <button id="closeSidebar" class="icon-button ghost" type="button" title="Закрыть"><svg><use href="#i-arrow-left"></use></svg></button>
+      </div>
+      <label class="global-search">
+        <svg><use href="#i-search"></use></svg>
+        <input id="globalSearchInput" type="search" autocomplete="off" placeholder="Поиск">
+        <kbd>Ctrl K</kbd>
+      </label>
+      <div class="chat-filters" aria-label="Фильтр чатов">
+        <button class="active" type="button" data-chat-filter="all">Все</button>
+        <button type="button" data-chat-filter="private">Личные</button>
+        <button type="button" data-chat-filter="room">Группы</button>
+        <button type="button" data-chat-filter="unread">Новые</button>
       </div>
       <section class="panel-section chats-panel" data-sidebar-panel="chats">
         <div class="section-title">
           <span>Чаты</span>
-          <button id="openRoomModalChat" class="icon-button" type="button" title="Создать комнату">+</button>
+          <button id="openRoomModalChat" class="icon-button" type="button" title="Создать комнату"><svg><use href="#i-plus"></use></svg></button>
         </div>
         <div id="chatsList" class="list"></div>
       </section>
       <section class="panel-section rooms-panel" data-sidebar-panel="rooms" hidden>
         <div class="section-title">
           <span>Комнаты</span>
-          <button id="openRoomModal" class="icon-button" type="button" title="Создать комнату">+</button>
+          <button id="openRoomModal" class="icon-button" type="button" title="Создать комнату"><svg><use href="#i-plus"></use></svg></button>
         </div>
         <div id="roomsList" class="list"></div>
       </section>
@@ -71,16 +102,19 @@
 
     <main class="chat">
       <header class="chat-header">
-        <button id="openSidebar" class="icon-button menu-button" type="button" title="К списку чатов">←</button>
+        <button id="openSidebar" class="icon-button menu-button" type="button" title="К списку чатов"><svg><use href="#i-arrow-left"></use></svg></button>
         <button id="chatHeaderButton" class="chat-title-button" type="button">
-          <span id="chatAvatar" class="avatar small">#</span>
+          <span id="chatAvatar" class="avatar small">N</span>
           <span>
             <strong id="chatTitle">Общий чат</strong>
+            <small id="chatSubtitle">В сети</small>
           </span>
         </button>
         <div class="call-actions">
-          <button id="audioCallButton" class="icon-button ghost call-icon call-audio-icon" type="button" title="Аудиозвонок" aria-label="Аудиозвонок" hidden></button>
-          <button id="videoCallButton" class="icon-button ghost call-icon call-video-icon" type="button" title="Видеозвонок" aria-label="Видеозвонок" hidden></button>
+          <button id="audioCallButton" class="icon-button ghost" type="button" title="Аудиозвонок" aria-label="Аудиозвонок" hidden><svg><use href="#i-phone"></use></svg></button>
+          <button id="videoCallButton" class="icon-button ghost" type="button" title="Видеозвонок" aria-label="Видеозвонок" hidden><svg><use href="#i-video"></use></svg></button>
+          <button class="icon-button ghost header-tool" type="button" title="Закрепленные сообщения"><svg><use href="#i-pin"></use></svg></button>
+          <button class="icon-button ghost header-tool" type="button" title="Информация"><svg><use href="#i-info"></use></svg></button>
         </div>
       </header>
       <div class="messages-wrap">
@@ -91,10 +125,11 @@
       <form id="messageForm" class="composer">
         <div id="replyBar" class="reply-bar" hidden></div>
         <input id="fileInput" type="file" accept="image/*,video/*" hidden>
-        <button id="attachButton" class="icon-button ghost media-icon attach-icon" type="button" title="Фото или видео" aria-label="Фото или видео"></button>
-        <button id="recordButton" class="icon-button ghost media-icon mic-icon" type="button" title="Тап: голос/видео. Удерживайте для записи" aria-label="Запись"></button>
+        <button id="attachButton" class="icon-button ghost" type="button" title="Фото или видео" aria-label="Фото или видео"><svg><use href="#i-paperclip"></use></svg></button>
+        <button class="icon-button ghost emoji-button" type="button" title="Эмодзи" aria-label="Эмодзи"><svg><use href="#i-sparkles"></use></svg></button>
+        <button id="recordButton" class="icon-button ghost media-icon mic-icon" type="button" title="Тап: голос/видео. Удерживайте для записи" aria-label="Запись"><svg><use href="#i-mic"></use></svg></button>
         <textarea id="messageInput" maxlength="1000" placeholder="Напишите сообщение" rows="1"></textarea>
-        <button id="sendButton" type="submit">Отправить</button>
+        <button id="sendButton" class="send-fab" type="submit" title="Отправить" aria-label="Отправить"><svg><use href="#i-send"></use></svg></button>
       </form>
     </main>
 
@@ -121,7 +156,7 @@
 
   <div id="recordPreviewOverlay" class="record-preview-overlay" hidden>
     <video id="recordLivePreview" class="record-live-preview" autoplay muted playsinline></video>
-    <button id="switchCameraButton" class="camera-switch-button" type="button" title="Сменить камеру" aria-label="Сменить камеру">↻</button>
+    <button id="switchCameraButton" class="camera-switch-button" type="button" title="Сменить камеру" aria-label="Сменить камеру"><svg><use href="#i-refresh"></use></svg></button>
     <div class="record-preview-status">
       <span class="record-dot"></span>
       <span id="recordTimer">00:00</span>
@@ -135,7 +170,7 @@
           <strong id="callTitle">Звонок</strong>
           <span id="callStatus">Соединение...</span>
         </div>
-        <button id="callCloseButton" class="icon-button ghost" type="button" title="Закрыть">×</button>
+        <button id="callCloseButton" class="icon-button ghost" type="button" title="Закрыть"><svg><use href="#i-x"></use></svg></button>
       </div>
       <div class="call-media">
         <video id="remoteCallVideo" class="remote-call-video" autoplay playsinline></video>
@@ -258,7 +293,7 @@
 
   <div id="toast" class="toast" role="status">
     <span id="toastText"></span>
-    <button id="toastClose" type="button" title="Закрыть">×</button>
+    <button id="toastClose" type="button" title="Закрыть" aria-label="Закрыть"><svg><use href="#i-x"></use></svg></button>
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/pwa.js"></script>
