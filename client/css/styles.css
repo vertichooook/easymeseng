@@ -1,43 +1,54 @@
 :root {
   --app-height: 100vh;
-  --bg: #f4f1ea;
-  --canvas: #f9f7f1;
-  --sidebar: #17202a;
-  --sidebar-2: #202b38;
+  --bg: #f3f5f9;
+  --canvas: #f8fafc;
+  --sidebar: #f8fafc;
+  --sidebar-2: #eef2f7;
   --panel: #ffffff;
-  --panel-2: #f1f4f7;
-  --text: #18212b;
-  --muted: #6f7d8a;
-  --line: #dfe5ea;
-  --accent: #0f8f82;
-  --accent-2: #d85f45;
-  --accent-3: #5267d8;
-  --danger: #c33c4a;
-  --mine: #dff3ed;
-  --theirs: #ffffff;
-  --shadow-sm: 0 8px 24px rgb(20 30 42 / 0.08);
-  --shadow: 0 22px 70px rgb(20 30 42 / 0.16);
-  --radius: 18px;
+  --panel-2: #eef2f7;
+  --text: #111827;
+  --muted: #64748b;
+  --line: rgba(226, 232, 240, 0.9);
+  --accent: #6366f1;
+  --accent-2: #8b5cf6;
+  --accent-3: #4f46e5;
+  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  --danger: #ef4444;
+  --mine: #eef2ff;
+  --theirs: rgba(255, 255, 255, 0.86);
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-bg-strong: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(226, 232, 240, 0.82);
+  --shadow-sm: 0 10px 24px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04);
+  --shadow: 0 24px 70px rgba(15, 23, 42, 0.14), 0 8px 28px rgba(79, 70, 229, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  --shadow-glow: 0 14px 34px rgba(99, 102, 241, 0.24);
+  --radius: 20px;
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body.dark {
-  --bg: #0d1117;
-  --canvas: #10161f;
-  --sidebar: #090d13;
-  --sidebar-2: #131b26;
-  --panel: #18212c;
-  --panel-2: #111923;
-  --text: #eef3f7;
-  --muted: #9aa9b8;
-  --line: #2a3645;
-  --accent: #35b9a9;
-  --accent-2: #ff846b;
-  --accent-3: #8d9aff;
-  --danger: #ff6f7a;
-  --mine: #123a36;
-  --theirs: #18212c;
-  --shadow-sm: 0 8px 24px rgb(0 0 0 / 0.20);
-  --shadow: 0 22px 70px rgb(0 0 0 / 0.34);
+  --bg: #0b0f17;
+  --canvas: #0f141f;
+  --sidebar: #0b0f17;
+  --sidebar-2: #151d2a;
+  --panel: #151d2a;
+  --panel-2: #0f141f;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --line: rgba(255, 255, 255, 0.08);
+  --accent: #818cf8;
+  --accent-2: #a78bfa;
+  --accent-3: #6366f1;
+  --accent-gradient: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+  --danger: #fb7185;
+  --mine: #2e3860;
+  --theirs: rgba(21, 29, 42, 0.86);
+  --glass-bg: rgba(21, 29, 42, 0.68);
+  --glass-bg-strong: rgba(21, 29, 42, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --shadow-sm: 0 10px 28px rgba(0, 0, 0, 0.26), 0 2px 10px rgba(0, 0, 0, 0.18);
+  --shadow: 0 26px 80px rgba(0, 0, 0, 0.42), 0 10px 38px rgba(79, 70, 229, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-glow: 0 16px 40px rgba(99, 102, 241, 0.28);
 }
 
 * { box-sizing: border-box; }
@@ -3051,5 +3062,275 @@ body.message-pressing .message * {
   .call-card {
     align-self: end;
     border-radius: 24px 24px max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Glassmorphism clean-tech refresh */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 42%, transparent) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent) 52%, transparent);
+}
+
+body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(99, 102, 241, 0.12), transparent 28%),
+    radial-gradient(circle at 84% 14%, rgba(139, 92, 246, 0.11), transparent 30%),
+    linear-gradient(135deg, var(--bg), var(--canvas));
+}
+
+body.dark {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(99, 102, 241, 0.18), transparent 28%),
+    radial-gradient(circle at 86% 12%, rgba(139, 92, 246, 0.14), transparent 30%),
+    linear-gradient(135deg, var(--bg), var(--canvas));
+}
+
+button {
+  border-radius: 14px;
+  background: var(--accent-gradient);
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.18);
+  transition: var(--transition);
+}
+
+button:hover {
+  transform: translateY(-1.5px);
+  background: var(--accent-gradient);
+  box-shadow: var(--shadow-glow);
+}
+
+button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.ghost {
+  color: var(--text);
+  background: color-mix(in srgb, var(--glass-bg) 72%, transparent);
+  border: 1px solid var(--glass-border);
+  box-shadow: none;
+}
+
+.ghost:hover {
+  background: color-mix(in srgb, var(--glass-bg-strong) 88%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--glass-border));
+  box-shadow: 0 10px 26px rgba(99, 102, 241, 0.14);
+}
+
+input,
+textarea,
+.settings-field select {
+  border-color: var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--glass-bg-strong) 88%, transparent);
+  transition: var(--transition);
+}
+
+input:focus,
+textarea:focus,
+.settings-field select:focus {
+  border-color: color-mix(in srgb, var(--accent) 76%, white);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.app-shell {
+  background:
+    radial-gradient(circle at 18% 4%, rgba(99, 102, 241, 0.12), transparent 26%),
+    radial-gradient(circle at 74% 10%, rgba(139, 92, 246, 0.1), transparent 30%),
+    linear-gradient(135deg, var(--bg), var(--canvas));
+}
+
+.sidebar,
+.chat,
+.inspector-panel {
+  background: color-mix(in srgb, var(--glass-bg) 82%, transparent);
+  border-color: var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.sidebar {
+  color: var(--text);
+  box-shadow: inset -1px 0 0 var(--glass-border);
+}
+
+.brand,
+.panel-section,
+.chat-header {
+  border-color: var(--glass-border);
+}
+
+.brand .ghost,
+.sidebar .icon-button.ghost {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--glass-border);
+}
+
+.brand-lockup strong,
+.auth-logo strong,
+.section-title,
+.list-item,
+.sidebar .list-item,
+.list-item small,
+.sidebar .list-item small {
+  color: var(--text);
+}
+
+.section-title,
+.list-item small,
+.sidebar .list-item small {
+  color: var(--muted);
+}
+
+.logo-mark,
+.avatar {
+  background: var(--accent-gradient);
+  box-shadow: 0 12px 28px rgba(79, 70, 229, 0.22);
+}
+
+.auth-card,
+.modal-content,
+.modal-form,
+.changelog-modal,
+.context-menu,
+.toast,
+.call-card,
+.inspector-card,
+.inspector-members,
+.room-settings,
+.card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.auth-card,
+.modal-form,
+.changelog-modal,
+.call-card,
+.inspector-card,
+.inspector-members {
+  border-radius: var(--radius);
+}
+
+.list-item,
+.sidebar .list-item {
+  position: relative;
+  border-radius: 18px;
+  color: var(--text);
+  transition: var(--transition);
+}
+
+.list-item::before,
+.sidebar .list-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: transparent;
+  transition: var(--transition);
+}
+
+.list-item:hover,
+.sidebar .list-item:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 7%, var(--glass-bg));
+  transform: translateY(-1px);
+}
+
+.list-item.active,
+.sidebar .list-item.active {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 12%, var(--glass-bg-strong));
+  border-color: color-mix(in srgb, var(--accent) 26%, var(--glass-border));
+  box-shadow: inset 3px 0 0 var(--accent), 0 12px 32px rgba(99, 102, 241, 0.12);
+}
+
+.list-item.active::before,
+.sidebar .list-item.active::before {
+  background: var(--accent);
+}
+
+.message,
+.message-bubble {
+  border-radius: 18px;
+  background: var(--theirs);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm);
+  animation: messageBubbleIn 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.message.mine,
+.message-bubble.mine {
+  background: var(--mine);
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--glass-border));
+}
+
+.message.mentioned {
+  border-color: color-mix(in srgb, var(--accent-2) 64%, var(--glass-border));
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.14), var(--shadow-sm);
+}
+
+.message-content {
+  border-radius: 18px;
+}
+
+.composer,
+.pinned-bar,
+.reply-bar,
+.people-search {
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.composer .icon-button:hover,
+.call-actions .icon-button:hover,
+.rail-button:hover,
+.rail-button.active {
+  box-shadow: var(--shadow-glow);
+}
+
+.danger-fill {
+  background: linear-gradient(135deg, #fb7185 0%, #ef4444 100%);
+}
+
+.danger-fill:hover {
+  background: linear-gradient(135deg, #fb7185 0%, #ef4444 100%);
+  box-shadow: 0 14px 34px rgba(239, 68, 68, 0.22);
+}
+
+@keyframes messageBubbleIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
