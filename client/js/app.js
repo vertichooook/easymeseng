@@ -408,16 +408,19 @@ function getRingtonePreset() {
 
 function setupDefaultReactionSetting() {
   if (!el.settingsModal || document.querySelector('#defaultReactionSelect')) return;
+  const section = document.querySelector('#settingsDynamicSection') || el.settingsModal.querySelector('.settings-footer');
+  if (section?.id === 'settingsDynamicSection' && !section.querySelector('.settings-section-title')) {
+    section.innerHTML = `<div class="settings-section-title"><svg><use href="#i-sparkles"></use></svg><span>Поведение</span></div>`;
+  }
   const label = document.createElement('label');
-  label.className = 'settings-field';
+  label.className = 'settings-field settings-select-row';
   label.innerHTML = `
     <span>Реакция по двойному клику</span>
-    <select id="defaultReactionSelect">
+    <select id="defaultReactionSelect" aria-label="Реакция по двойному клику">
       ${Object.entries(reactionIcons).map(([key, icon]) => `<option value="${key}">${icon}</option>`).join('')}
     </select>
   `;
-  const closeButton = document.querySelector('#closeSettings');
-  closeButton?.before(label);
+  section?.append(label);
   const select = label.querySelector('select');
   select.value = getDefaultReaction();
   select.addEventListener('change', () => localStorage.setItem('nexus:defaultReaction', select.value));
@@ -425,6 +428,10 @@ function setupDefaultReactionSetting() {
 
 function setupRingtoneSetting() {
   if (!el.settingsModal || document.querySelector('#ringtoneSelect')) return;
+  const section = document.querySelector('#settingsDynamicSection') || el.settingsModal.querySelector('.settings-footer');
+  if (section?.id === 'settingsDynamicSection' && !section.querySelector('.settings-section-title')) {
+    section.innerHTML = `<div class="settings-section-title"><svg><use href="#i-music"></use></svg><span>Звонки</span></div>`;
+  }
   const field = document.createElement('div');
   field.className = 'settings-field ringtone-field';
   field.innerHTML = `
@@ -434,10 +441,9 @@ function setupRingtoneSetting() {
         ${Object.entries(ringtonePresets).map(([key, preset]) => `<option value="${key}">${escapeHtml(preset.name)}</option>`).join('')}
       </select>
     </label>
-    <button id="previewRingtoneButton" type="button">Прослушать</button>
+    <button id="previewRingtoneButton" class="settings-action compact" type="button"><svg><use href="#i-music"></use></svg><span>Прослушать</span></button>
   `;
-  const closeButton = document.querySelector('#closeSettings');
-  closeButton?.before(field);
+  section?.append(field);
   const select = field.querySelector('#ringtoneSelect');
   select.value = getRingtonePresetKey();
   select.addEventListener('change', () => localStorage.setItem('nexus:ringtone', select.value));
