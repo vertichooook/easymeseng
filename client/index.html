@@ -71,6 +71,12 @@
         <button type="button" data-chat-filter="room">Группы</button>
         <button type="button" data-chat-filter="unread">Новые</button>
       </div>
+      <div class="sidebar-quick-actions">
+        <button id="openPeoplePanel" type="button">
+          <svg><use href="#i-search"></use></svg>
+          <span>Найти пользователя</span>
+        </button>
+      </div>
       <section class="panel-section chats-panel" data-sidebar-panel="chats">
         <div class="section-title">
           <span>Чаты</span>
@@ -90,7 +96,10 @@
         <div id="usersList" class="list"></div>
       </section>
       <section class="panel-section people-section" data-sidebar-panel="people" hidden>
-        <div class="section-title"><span>People</span></div>
+        <div class="section-title">
+          <button id="backToChatsFromPeople" class="icon-button ghost" type="button" title="Назад к чатам"><svg><use href="#i-arrow-left"></use></svg></button>
+          <span>Поиск пользователей</span>
+        </div>
         <label class="people-search">
           <input id="peopleSearchInput" type="search" autocomplete="off" placeholder="@username">
           <button id="peopleSearchButton" type="button">Найти</button>

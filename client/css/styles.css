@@ -3519,6 +3519,44 @@ body {
   box-shadow: 0 8px 22px rgba(99, 102, 241, 0.14);
 }
 
+.sidebar-quick-actions {
+  margin: 0 16px 10px;
+}
+
+.sidebar-quick-actions button {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: var(--text);
+  font-weight: 800;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(139, 92, 246, 0.24);
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(99, 102, 241, 0.12);
+}
+
+.sidebar-quick-actions button:hover {
+  background: rgba(99, 102, 241, 0.18);
+  transform: translateY(-1px);
+}
+
+.people-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.people-section .section-title .icon-button {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  padding: 0;
+}
+
 .panel-section {
   padding: 10px 14px 16px;
   border-top: 0;

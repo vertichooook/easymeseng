@@ -2405,6 +2405,15 @@ document.querySelectorAll('[data-rail-action]').forEach((button) => {
   });
 });
 
+document.querySelector('#openPeoplePanel')?.addEventListener('click', () => {
+  setSidebarMode('people');
+  el.peopleSearchInput?.focus();
+});
+
+document.querySelector('#backToChatsFromPeople')?.addEventListener('click', () => {
+  setSidebarMode('chats');
+});
+
 document.querySelectorAll('[data-chat-filter]').forEach((button) => {
   button.addEventListener('click', () => {
     state.chatFilter = button.dataset.chatFilter || 'all';
