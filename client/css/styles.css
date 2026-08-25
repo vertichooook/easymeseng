@@ -5563,3 +5563,262 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Chat stage stabilization */
+.chat {
+  position: relative;
+  min-width: 0;
+  height: var(--app-height, 100dvh) !important;
+  display: grid !important;
+  grid-template-rows: 74px minmax(0, 1fr) auto 78px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(37, 99, 235, 0.08), transparent 34%),
+    linear-gradient(180deg, #111827 0%, #0b111d 100%) !important;
+  border-left: 1px solid rgba(148, 163, 184, 0.12);
+  border-right: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.chat::before {
+  display: none !important;
+  content: none !important;
+}
+
+.chat-header {
+  min-height: 74px !important;
+  height: 74px !important;
+  margin: 0 !important;
+  padding: 0 22px !important;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.78) !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.chat-title-button {
+  max-width: min(520px, 58vw) !important;
+  min-height: 52px;
+  padding: 6px 10px !important;
+  border-radius: 16px !important;
+}
+
+.chat-title-button:hover {
+  background: rgba(255, 255, 255, 0.055) !important;
+}
+
+.call-actions {
+  margin-left: auto;
+}
+
+.messages-wrap {
+  min-height: 0;
+  margin: 0 !important;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+    #0b111d !important;
+  background-size: 36px 36px;
+  border: 0 !important;
+}
+
+.messages {
+  width: 100%;
+  max-width: 1120px;
+  min-height: 0;
+  height: 100%;
+  margin: 0 auto;
+  padding: 24px 28px 24px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 10px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto;
+  background: transparent !important;
+}
+
+.message {
+  max-width: min(560px, 72%) !important;
+  min-width: 0;
+  padding: 10px 12px 9px !important;
+  gap: 10px;
+  align-self: flex-start;
+  color: #f8fafc;
+  background: rgba(31, 41, 55, 0.86) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  border-radius: 18px 18px 18px 7px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16) !important;
+}
+
+.message.mine {
+  align-self: flex-end;
+  padding-right: 38px !important;
+  padding-bottom: 22px !important;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.62), rgba(46, 56, 96, 0.92)) !important;
+  border-color: rgba(129, 140, 248, 0.28) !important;
+  border-radius: 18px 18px 7px 18px !important;
+}
+
+.message .meta {
+  gap: 8px;
+  color: #94a3b8 !important;
+  font-size: 12px !important;
+}
+
+.message .meta strong {
+  color: #f8fafc !important;
+  font-size: 13px;
+}
+
+.message p {
+  margin-top: 6px;
+  color: #f8fafc !important;
+  font-size: 15px;
+  line-height: 1.42 !important;
+}
+
+.message-status {
+  right: 12px !important;
+  bottom: 7px !important;
+}
+
+.typing {
+  min-height: 22px !important;
+  padding: 0 max(22px, calc((100% - 1120px) / 2 + 28px)) !important;
+  background: #0b111d !important;
+}
+
+.composer {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: min(1120px, calc(100% - 44px)) !important;
+  min-height: 58px;
+  margin: 10px auto 14px !important;
+  padding: 8px !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto auto !important;
+  align-items: end !important;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+  background: rgba(15, 23, 42, 0.92) !important;
+  border: 1px solid rgba(148, 163, 184, 0.15) !important;
+  border-radius: 26px !important;
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.32) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.composer::before {
+  display: none !important;
+  content: none !important;
+}
+
+.composer .emoji-button {
+  display: none !important;
+}
+
+.composer textarea {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 42px !important;
+  height: 42px;
+  max-height: 118px;
+  padding: 10px 14px !important;
+  color: #f8fafc !important;
+  background: rgba(255, 255, 255, 0.055) !important;
+  border: 1px solid rgba(148, 163, 184, 0.12) !important;
+  border-radius: 20px !important;
+  box-shadow: none !important;
+}
+
+.composer .icon-button,
+.composer #sendButton,
+.composer .send-fab {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+}
+
+.composer.has-text {
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+}
+
+.composer.has-text #recordButton {
+  display: none !important;
+}
+
+.composer.has-text #sendButton {
+  display: grid !important;
+}
+
+@media (max-width: 760px) {
+  .chat {
+    grid-template-rows: 62px minmax(0, 1fr) auto 66px !important;
+  }
+
+  .chat-header {
+    min-height: 62px !important;
+    height: 62px !important;
+    padding: 0 12px !important;
+  }
+
+  .chat-title-button {
+    max-width: calc(100vw - 128px) !important;
+  }
+
+  .messages {
+    padding: 16px 10px 18px !important;
+    gap: 8px !important;
+  }
+
+  .message {
+    max-width: 86% !important;
+    padding: 8px 10px !important;
+  }
+
+  .message.mine {
+    padding-right: 34px !important;
+    padding-bottom: 20px !important;
+  }
+
+  .typing {
+    padding-inline: 12px !important;
+  }
+
+  .composer {
+    width: calc(100% - 16px) !important;
+    min-height: 54px;
+    margin: 6px 8px max(8px, env(safe-area-inset-bottom)) !important;
+    padding: 6px !important;
+    grid-template-columns: auto minmax(0, 1fr) auto !important;
+    border-radius: 24px !important;
+  }
+
+  .composer #attachButton {
+    display: grid !important;
+  }
+
+  .composer textarea {
+    min-height: 40px !important;
+    height: 40px;
+    padding: 9px 12px !important;
+    border-radius: 19px !important;
+  }
+
+  .composer .icon-button,
+  .composer #sendButton,
+  .composer .send-fab {
+    position: static !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+  }
+}
