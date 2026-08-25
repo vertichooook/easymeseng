@@ -35,6 +35,16 @@
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.5 5.8L21 8"/><path d="M21 3v5h-5"/></symbol>
     <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="m19 16 .9 2.6 2.1.9-2.1.9L19 23l-.9-2.6-2.1-.9 2.1-.9Z"/><path d="m4 4 .7 2 1.8.7-1.8.7-.7 2-.7-2-1.8-.7 1.8-.7Z"/></symbol>
   </svg>
+  <div class="ts6-topbar" aria-hidden="true">
+    <button class="ts6-topbar-icon" type="button"><svg><use href="#i-info"></use></svg></button>
+    <div class="ts6-wordmark"><span>nexus</span><b>talk</b></div>
+    <div class="ts6-device-pill">
+      <span>AFK</span>
+      <svg><use href="#i-mic"></use></svg>
+      <svg><use href="#i-phone"></use></svg>
+    </div>
+    <div class="ts6-window-controls"><i></i><i></i><i></i></div>
+  </div>
   <div id="loadingScreen" class="loading-screen">
     <div class="loading-desktop">
       <span class="logo-mark large">N</span>
@@ -110,6 +120,22 @@
     </aside>
 
     <main class="chat">
+      <section class="ts6-stage-hero" aria-label="Nexus community">
+        <div class="ts6-hero-banner">
+          <div>
+            <strong id="stageHeroTitle">Создай свою Nexus Community</strong>
+            <span id="stageHeroSubtitle">Общайся в комнатах, личных чатах и голосовых каналах с друзьями.</span>
+          </div>
+          <button id="stageCreateRoom" type="button">Создать комнату</button>
+        </div>
+        <div class="ts6-discovery">
+          <div class="ts6-discovery-head">
+            <strong>Популярные пространства</strong>
+            <span>Выбирай комнату или начинай личный диалог</span>
+          </div>
+          <div id="stageHeroCards" class="ts6-community-grid"></div>
+        </div>
+      </section>
       <header class="chat-header">
         <button id="openSidebar" class="icon-button menu-button" type="button" title="К списку чатов"><svg><use href="#i-arrow-left"></use></svg></button>
         <button id="chatHeaderButton" class="chat-title-button" type="button">

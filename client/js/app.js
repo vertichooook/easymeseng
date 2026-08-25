@@ -46,6 +46,10 @@ const el = {
   peopleSearchButton: document.querySelector('#peopleSearchButton'),
   peopleContactsList: document.querySelector('#peopleContactsList'),
   peopleSearchResults: document.querySelector('#peopleSearchResults'),
+  stageHeroTitle: document.querySelector('#stageHeroTitle'),
+  stageHeroSubtitle: document.querySelector('#stageHeroSubtitle'),
+  stageHeroCards: document.querySelector('#stageHeroCards'),
+  stageCreateRoom: document.querySelector('#stageCreateRoom'),
   messages: document.querySelector('#messages'),
   title: document.querySelector('#chatTitle'),
   chatSubtitle: document.querySelector('#chatSubtitle'),
@@ -615,10 +619,39 @@ function compactListItem(entity, type) {
   `;
 }
 
+function renderStageCards() {
+  if (!el.stageHeroCards) return;
+  const rooms = state.rooms.slice(0, 3).map((room) => ({ type: 'room', item: room }));
+  const users = state.users.slice(0, Math.max(0, 3 - rooms.length)).map((user) => ({ type: 'private', item: user }));
+  const cards = [...rooms, ...users];
+  el.stageHeroCards.innerHTML = cards.length
+    ? cards.map(({ type, item }) => {
+      const isRoom = type === 'room';
+      const title = isRoom ? item.name : displayName(item);
+      const subtitle = isRoom ? 'Room workspace' : `@${item.username}`;
+      const data = isRoom ? `data-room="${item.id}"` : `data-user="${item.id}"`;
+      return `
+        <button class="ts6-community-card" type="button" ${data}>
+          <span class="ts6-card-watermark">${isRoom ? icon('hash') : icon('lock')}</span>
+          <span class="ts6-card-title">${escapeHtml(title)}</span>
+          <small>${escapeHtml(subtitle)}</small>
+        </button>
+      `;
+    }).join('')
+    : `
+      <button class="ts6-community-card ts6-community-card-empty" type="button" id="stageEmptyCreateRoom">
+        <span class="ts6-card-watermark">${icon('plus')}</span>
+        <span class="ts6-card-title">Новая комната</span>
+        <small>Создай первое пространство</small>
+      </button>
+    `;
+}
+
 function renderLists() {
   renderUnifiedChats();
   el.rooms.innerHTML = state.rooms.map((room) => compactListItem(room, 'room')).join('');
   el.users.innerHTML = state.users.map((user) => compactListItem(user, 'private')).join('');
+  renderStageCards();
   if (el.peopleContactsList) {
     el.peopleContactsList.innerHTML = state.users.length
       ? state.users.map((user) => `
@@ -2423,6 +2456,17 @@ document.querySelectorAll('[data-chat-filter]').forEach((button) => {
 });
 
 el.globalSearchInput?.addEventListener('input', renderUnifiedChats);
+el.stageCreateRoom?.addEventListener('click', () => document.querySelector('#roomModal')?.showModal());
+el.stageHeroCards?.addEventListener('click', async (event) => {
+  if (event.target.closest('#stageEmptyCreateRoom')) {
+    document.querySelector('#roomModal')?.showModal();
+    return;
+  }
+  const roomButton = event.target.closest('[data-room]');
+  const userButton = event.target.closest('[data-user]');
+  if (roomButton) await openRoom(state.rooms.find((room) => room.id === Number(roomButton.dataset.room)));
+  if (userButton) await openPrivate(state.users.find((user) => user.id === Number(userButton.dataset.user)));
+});
 window.addEventListener('keydown', (event) => {
   const hotkey = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k';
   if (!hotkey || !el.globalSearchInput) return;

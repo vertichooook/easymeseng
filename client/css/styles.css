@@ -1618,6 +1618,455 @@ dialog[open] { animation: modalIn 0.16s ease both; }
   }
 }
 
+/* TeamSpeak 6 structural layout */
+body {
+  display: grid;
+  grid-template-rows: 42px minmax(0, 1fr);
+}
+
+.ts6-topbar {
+  height: 42px;
+  display: grid;
+  grid-template-columns: 56px auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  padding: 0 14px 0 8px;
+  color: #eaf3ff;
+  background:
+    linear-gradient(90deg, rgba(20, 29, 45, 0.98), rgba(17, 24, 39, 0.98)),
+    #111827;
+  border-bottom: 1px solid rgba(150, 177, 218, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.ts6-topbar-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: #eaf3ff;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.ts6-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  font-size: 24px;
+  font-weight: 950;
+  letter-spacing: -0.065em;
+  text-transform: lowercase;
+}
+
+.ts6-wordmark span {
+  color: #128cff;
+  text-shadow: 0 0 18px rgba(18, 140, 255, 0.45);
+}
+
+.ts6-wordmark b {
+  color: #f8fbff;
+}
+
+.ts6-device-pill {
+  justify-self: center;
+  height: 30px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #e6f1ff;
+  background: rgba(39, 51, 74, 0.92);
+  border: 1px solid rgba(150, 177, 218, 0.14);
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.ts6-device-pill span {
+  padding: 2px 4px;
+  font-size: 10px;
+  font-weight: 900;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 4px;
+}
+
+.ts6-device-pill svg {
+  width: 17px;
+  height: 17px;
+}
+
+.ts6-window-controls {
+  display: inline-flex;
+  gap: 16px;
+}
+
+.ts6-window-controls i {
+  width: 12px;
+  height: 12px;
+  display: block;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+}
+
+.ts6-window-controls i:first-child {
+  height: 1px;
+  margin-top: 9px;
+  border-width: 1px 0 0;
+}
+
+.ts6-window-controls i:last-child {
+  position: relative;
+  border: 0;
+}
+
+.ts6-window-controls i:last-child::before,
+.ts6-window-controls i:last-child::after {
+  content: "";
+  position: absolute;
+  inset: 5px 0 auto;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.ts6-window-controls i:last-child::before {
+  transform: rotate(45deg);
+}
+
+.ts6-window-controls i:last-child::after {
+  transform: rotate(-45deg);
+}
+
+.app-shell {
+  height: calc(var(--app-height, 100dvh) - 42px);
+  grid-template-columns: 268px minmax(0, 1fr);
+  background: #111827;
+}
+
+.inspector-panel {
+  display: none;
+}
+
+.chat {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  padding: 28px 42px 18px;
+  background:
+    radial-gradient(circle at 46% 0%, rgba(0, 118, 255, 0.15), transparent 34%),
+    linear-gradient(180deg, #202a3e 0%, #161f31 100%);
+  border-left: 1px solid rgba(150, 177, 218, 0.16);
+  overflow: hidden;
+}
+
+.ts6-stage-hero {
+  position: relative;
+  z-index: 1;
+  padding: 0 8px 18px;
+  display: grid;
+  gap: 18px;
+}
+
+.ts6-hero-banner {
+  min-height: 134px;
+  padding: 22px 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(circle at 12% 16%, rgba(255, 255, 255, 0.28), transparent 18%),
+    radial-gradient(circle at 88% 20%, rgba(255, 255, 255, 0.26), transparent 16%),
+    linear-gradient(135deg, #0053e8 0%, #0030c9 48%, #14a8ff 100%);
+  border: 1px solid rgba(80, 169, 255, 0.46);
+  border-radius: 17px;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.ts6-hero-banner::before,
+.ts6-hero-banner::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.22);
+  filter: blur(0.2px);
+  transform: rotate(-18deg);
+}
+
+.ts6-hero-banner::before {
+  left: 40px;
+  top: -20px;
+  width: 120px;
+  height: 84px;
+}
+
+.ts6-hero-banner::after {
+  right: 70px;
+  bottom: -28px;
+  width: 92px;
+  height: 72px;
+  transform: rotate(18deg);
+}
+
+.ts6-hero-banner strong {
+  position: relative;
+  z-index: 1;
+  display: block;
+  font-size: clamp(24px, 3.2vw, 36px);
+  font-weight: 950;
+  letter-spacing: -0.045em;
+  line-height: 1.06;
+}
+
+.ts6-hero-banner span {
+  position: relative;
+  z-index: 1;
+  display: block;
+  max-width: 640px;
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.ts6-hero-banner button {
+  position: relative;
+  z-index: 1;
+  min-height: 36px;
+  padding: 0 22px;
+  color: #fff;
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.ts6-discovery {
+  padding: 22px 26px 26px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(13, 19, 31, 0.9));
+  border: 1px solid rgba(150, 177, 218, 0.12);
+  border-radius: 15px;
+  box-shadow: 0 24px 54px rgba(0, 0, 0, 0.26);
+}
+
+.ts6-discovery-head {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(150, 177, 218, 0.13);
+}
+
+.ts6-discovery-head strong {
+  color: #fff;
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.ts6-discovery-head span {
+  color: #7688a6;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.ts6-community-grid {
+  padding-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.ts6-community-card {
+  position: relative;
+  min-height: 168px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+  align-items: start;
+  overflow: hidden;
+  color: #fff;
+  text-align: left;
+  background:
+    radial-gradient(circle at 22% 14%, rgba(255, 255, 255, 0.16), transparent 22%),
+    linear-gradient(135deg, rgba(0, 141, 255, 0.35), rgba(39, 51, 74, 0.96) 58%, rgba(0, 32, 120, 0.48));
+  border: 1px solid rgba(0, 145, 255, 0.32);
+  border-radius: 14px;
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.22);
+}
+
+.ts6-community-card:nth-child(2) {
+  background:
+    radial-gradient(circle at 20% 12%, rgba(255, 255, 255, 0.16), transparent 20%),
+    linear-gradient(135deg, rgba(0, 190, 150, 0.4), rgba(39, 51, 74, 0.96) 58%, rgba(0, 118, 255, 0.32));
+  border-color: rgba(30, 210, 180, 0.28);
+}
+
+.ts6-community-card:nth-child(3) {
+  background:
+    radial-gradient(circle at 70% 12%, rgba(255, 255, 255, 0.2), transparent 20%),
+    linear-gradient(135deg, #1027be, #0069f5 58%, #24c8ff);
+}
+
+.ts6-community-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 46px rgba(0, 118, 255, 0.2);
+}
+
+.ts6-card-watermark {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  color: rgba(255, 255, 255, 0.34);
+  transform: scale(2.4) rotate(-10deg);
+}
+
+.ts6-card-title {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 18px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ts6-community-card small {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-header,
+.messages-wrap,
+.typing,
+.composer {
+  position: relative;
+  z-index: 2;
+}
+
+.chat-header {
+  min-height: 58px;
+  margin: 0 8px;
+  padding: 10px 14px;
+  background: #111a2b;
+  border: 1px solid rgba(150, 177, 218, 0.13);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+}
+
+.messages-wrap {
+  margin: 0 8px;
+  min-height: 0;
+  background: rgba(13, 19, 31, 0.86);
+  border: 1px solid rgba(150, 177, 218, 0.13);
+  border-radius: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.messages {
+  padding: 18px 22px 104px;
+}
+
+.typing {
+  margin: 0 8px;
+  min-height: 24px;
+  padding: 4px 18px 0;
+  background: rgba(13, 19, 31, 0.86);
+  border-inline: 1px solid rgba(150, 177, 218, 0.13);
+}
+
+.composer {
+  left: 50px;
+  right: 50px;
+  bottom: 26px;
+}
+
+.sidebar .brand::after {
+  content: "Найди сервер, пользователя или комнату Nexus.";
+  display: block;
+  margin-top: 16px;
+  color: #8799b7;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.chats-panel .section-title::before,
+.rooms-panel .section-title::before,
+.users-section .section-title::before,
+.people-section .section-title::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  margin-right: 7px;
+  vertical-align: -2px;
+  border: 2px solid #8aa3c7;
+  border-radius: 3px;
+}
+
+@media (max-width: 1180px) {
+  .app-shell {
+    grid-template-columns: 268px minmax(0, 1fr);
+  }
+
+  .ts6-community-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  body {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .ts6-topbar {
+    display: none;
+  }
+
+  .app-shell {
+    height: var(--app-height, 100dvh);
+    grid-template-columns: 1fr;
+  }
+
+  .chat {
+    padding: 0;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+  }
+
+  .ts6-stage-hero {
+    display: none;
+  }
+
+  .chat-header {
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .messages-wrap,
+  .typing {
+    margin: 0;
+    border-inline: 0;
+  }
+
+  .composer {
+    left: 8px;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+  }
+}
+
 /* TeamSpeak 6 inspired Nexus skin */
 :root {
   color-scheme: dark;
